@@ -27,6 +27,7 @@ ENV/
 # Database & Storage
 *.sqlite3
 *.db
+*.db-journal
 burnout.db
 uploads/
 exports/

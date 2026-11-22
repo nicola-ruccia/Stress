@@ -73,15 +73,13 @@ burnout-backend/
 
 ---
 
-## 🚀 Come Avviare il Progetto (Guida Passo-Passo)
+## 🚀 Come Avviare il Backend API (Guida Passo-Passo)
 
-Puoi avviare l'applicazione in **3 modalità diverse** a seconda delle tue esigenze:
+Puoi avviare il backend in locale con Python oppure tramite Docker:
 
 ---
 
-### Metodo 1: Avvio Locale con Python (Consigliato per Windows / Mac / Linux)
-
-Questo metodo avvia **sia il Backend che l'Interfaccia Web Frontend** su un'unica porta (`8000`), senza bisogno di installare Node.js!
+### Metodo 1: Avvio Locale con Python (Windows / Mac / Linux)
 
 #### Su Windows (PowerShell):
 ```powershell
@@ -98,7 +96,7 @@ python -m venv venv
 # 4. Installa le dipendenze
 pip install -r requirements.txt
 
-# 5. Avvia il server
+# 5. Avvia il server FastAPI
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -111,58 +109,39 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### 🌐 Dove accedere:
-- 🖥️ **Interfaccia Web Completa (Frontend)**: apri nel browser 👉 [http://localhost:8000/](http://localhost:8000/)
-- 📑 **Documentazione Interattiva Swagger (API)**: apri 👉 [http://localhost:8000/docs](http://localhost:8000/docs)
+#### 🌐 Documentazione Interattiva API:
+- 📑 **Swagger UI (Interactive API Docs)**: apri 👉 [http://localhost:8000/docs](http://localhost:8000/docs)
 - 📖 **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+- ⚙️ **Healthcheck**: [http://localhost:8000/health](http://localhost:8000/health)
 
 ---
 
 ### Metodo 2: Avvio con Docker (Nessuna dipendenza locale richiesta)
 
-Se hai Docker Desktop installato, puoi avviare tutto con un solo comando:
+Se hai Docker Desktop installato:
 
 ```bash
 docker compose up --build
 ```
-L'applicazione completa sarà subito attiva su:
-👉 [http://localhost:8000/](http://localhost:8000/)
+Il server API sarà subito attivo su:
+👉 [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
-### Metodo 3: Sviluppo Frontend con Vite & Hot-Reload (Porta 3000)
+## ⚡ Caricamento Rapido della Clinica Demo per il Frontendista
 
-Se vuoi modificare il codice sorgente React/TypeScript in tempo reale:
+Dalla documentazione Swagger ([http://localhost:8000/docs](http://localhost:8000/docs)) oppure tramite cURL, puoi generare istantaneamente il dataset di prova completo:
 
 ```bash
-# In un terminale separato (con il backend avviato sulla porta 8000):
-cd frontend
-npm install
-npm run dev
+curl -X POST http://localhost:8000/api/v1/ingest/load-demo
 ```
+Questo genererà all'istante **150 operatori su 6 reparti e 24 mesi di storico**:
+- **Medicina (30)**: criticità elevata (pazienti per infermiere passati da 6 a 9, rientri rapidi elevati, 3 dimissioni recenti, 4 casi gravi).
+- **Nucleo Alzheimer RSA (30)**: frequenti aggressioni al personale.
+- **Chirurgia (28)**: frequenti turni da 12 ore, ma stabili.
+- **Cardiologia, Riabilitazione, Ambulatori**: reparti stabili e di confronto.
 
-L'interfaccia Vite per gli sviluppatori sarà attiva su:
-👉 [http://localhost:3000](http://localhost:3000) (inoltrerà in automatico le chiamate API alla porta 8000).
-
----
-
-## ⚡ Guida alla Demo in 60 Secondi (Come provarlo subito)
-
-Una volta aperto [http://localhost:8000/](http://localhost:8000/) nel browser:
-
-1. **Carica i Dati di Prova**:
-   - Vai nella scheda **Dati & Import** e clicca sul pulsante **⚡ Carica Clinica Demo**.
-   - Verranno generati all'istante 150 operatori su 6 reparti e 24 mesi di storico.
-2. **Esplora la Vista HR**:
-   - Clicca su **Vista HR**: vedrai i 4 KPI in alto (costo turnover stimato, reparti in allarme), la **Mappa di Calore** (Heatmap) con il reparto *Medicina* in rosso, i **Top 3 Fattori di Rischio** e le **Azioni Correttive Suggerite**.
-3. **Esplora la Vista Medico Competente**:
-   - Clicca su **Vista Medico**: visualizzerai l'elenco degli operatori ordinato per punteggio di rischio con la bandiera rossa **DA CONTATTARE**.
-   - Clicca su **Apri Scheda** per visualizzare il trend mensile, le risposte del check-in (protette da consenso) e salvare una **Presa in Carico** (che aggiornerà in tempo reale il contatore HR!).
-   - Clicca su **Registro Accessi** per verificare l'Audit Trail a norma GDPR.
-4. **Esplora la Vista Lavoratore**:
-   - Clicca su **Vista Lavoratore**: inserisci un codice (es. uno preso dalla vista medico o copia uno dei codici generati).
-   - Compila il **Check-in**: se selezioni un valore da 3 a 5, si sbloccherà automaticamente il questionario validato **BAT-12**.
-   - Prova il toggle di revoca del consenso medico per verificare come i dati sanitari vengano oscurati istantaneamente sulla vista del medico!
+Il tuo collega potrà quindi collegare il suo frontend chiamando direttamente gli endpoint REST documentati in [FRONTEND_API_GUIDE.md](file:///C:/Users/nexae/.gemini/antigravity/scratch/burnout-backend/FRONTEND_API_GUIDE.md).
 
 ---
 
