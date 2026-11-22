@@ -73,50 +73,96 @@ burnout-backend/
 
 ---
 
-## 🚀 Avvio Rapido
+## 🚀 Come Avviare il Progetto (Guida Passo-Passo)
 
-### Opzione 1: Con Python locale
-
-1. **Crea e attiva un virtual environment**:
-   ```bash
-   python -m venv venv
-   # Su Windows:
-   venv\Scripts\activate
-   # Su Linux/macOS:
-   source venv/bin/activate
-   ```
-
-2. **Installa le dipendenze**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Avvia il server di sviluppo**:
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-4. **Accedi all'Applicazione**:
-   - 🖥️ **Interfaccia Web Completa (Frontend)**: [http://localhost:8000/](http://localhost:8000/) (servita direttamente da FastAPI con bundle React)
-   - 📑 **Swagger UI / Documentazione API**: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-5. **(Opzionale) Sviluppo Frontend con Vite**:
-   Se vuoi modificare o eseguire il frontend in modalità hot-reload indipendente:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   L'interfaccia Vite sarà attiva su [http://localhost:3000](http://localhost:3000) e proxyerà automaticamente le chiamate verso la porta 8000.
+Puoi avviare l'applicazione in **3 modalità diverse** a seconda delle tue esigenze:
 
 ---
 
-### Opzione 2: Con Docker
+### Metodo 1: Avvio Locale con Python (Consigliato per Windows / Mac / Linux)
+
+Questo metodo avvia **sia il Backend che l'Interfaccia Web Frontend** su un'unica porta (`8000`), senza bisogno di installare Node.js!
+
+#### Su Windows (PowerShell):
+```powershell
+# 1. Posizionati nella cartella del progetto
+cd C:\Users\nexae\.gemini\antigravity\scratch\burnout-backend
+
+# 2. Crea l'ambiente virtuale Python (se non esiste già)
+python -m venv venv
+
+# 3. Attiva l'ambiente virtuale
+.\venv\Scripts\Activate.ps1
+# (Se PowerShell blocca gli script, esegui prima: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass)
+
+# 4. Installa le dipendenze
+pip install -r requirements.txt
+
+# 5. Avvia il server
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Su Linux / macOS (Bash):
+```bash
+cd burnout-backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### 🌐 Dove accedere:
+- 🖥️ **Interfaccia Web Completa (Frontend)**: apri nel browser 👉 [http://localhost:8000/](http://localhost:8000/)
+- 📑 **Documentazione Interattiva Swagger (API)**: apri 👉 [http://localhost:8000/docs](http://localhost:8000/docs)
+- 📖 **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+---
+
+### Metodo 2: Avvio con Docker (Nessuna dipendenza locale richiesta)
+
+Se hai Docker Desktop installato, puoi avviare tutto con un solo comando:
 
 ```bash
 docker compose up --build
 ```
-Il backend sarà immediatamente disponibile su `http://localhost:8000`.
+L'applicazione completa sarà subito attiva su:
+👉 [http://localhost:8000/](http://localhost:8000/)
+
+---
+
+### Metodo 3: Sviluppo Frontend con Vite & Hot-Reload (Porta 3000)
+
+Se vuoi modificare il codice sorgente React/TypeScript in tempo reale:
+
+```bash
+# In un terminale separato (con il backend avviato sulla porta 8000):
+cd frontend
+npm install
+npm run dev
+```
+
+L'interfaccia Vite per gli sviluppatori sarà attiva su:
+👉 [http://localhost:3000](http://localhost:3000) (inoltrerà in automatico le chiamate API alla porta 8000).
+
+---
+
+## ⚡ Guida alla Demo in 60 Secondi (Come provarlo subito)
+
+Una volta aperto [http://localhost:8000/](http://localhost:8000/) nel browser:
+
+1. **Carica i Dati di Prova**:
+   - Vai nella scheda **Dati & Import** e clicca sul pulsante **⚡ Carica Clinica Demo**.
+   - Verranno generati all'istante 150 operatori su 6 reparti e 24 mesi di storico.
+2. **Esplora la Vista HR**:
+   - Clicca su **Vista HR**: vedrai i 4 KPI in alto (costo turnover stimato, reparti in allarme), la **Mappa di Calore** (Heatmap) con il reparto *Medicina* in rosso, i **Top 3 Fattori di Rischio** e le **Azioni Correttive Suggerite**.
+3. **Esplora la Vista Medico Competente**:
+   - Clicca su **Vista Medico**: visualizzerai l'elenco degli operatori ordinato per punteggio di rischio con la bandiera rossa **DA CONTATTARE**.
+   - Clicca su **Apri Scheda** per visualizzare il trend mensile, le risposte del check-in (protette da consenso) e salvare una **Presa in Carico** (che aggiornerà in tempo reale il contatore HR!).
+   - Clicca su **Registro Accessi** per verificare l'Audit Trail a norma GDPR.
+4. **Esplora la Vista Lavoratore**:
+   - Clicca su **Vista Lavoratore**: inserisci un codice (es. uno preso dalla vista medico o copia uno dei codici generati).
+   - Compila il **Check-in**: se selezioni un valore da 3 a 5, si sbloccherà automaticamente il questionario validato **BAT-12**.
+   - Prova il toggle di revoca del consenso medico per verificare come i dati sanitari vengano oscurati istantaneamente sulla vista del medico!
 
 ---
 
