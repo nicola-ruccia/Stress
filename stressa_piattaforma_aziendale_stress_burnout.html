@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stressa — Burnout prima delle dimissioni</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      background-color: #F8FAFC;
+      color: #0F172A;
+      font-family: 'Inter', sans-serif;
+    }
+    h1, h2, h3, .font-display {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pop-in { animation: popIn 0.2s ease-out forwards; }
+  </style>
+</head>
+<body class="antialiased">
+
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
+
+  <!-- BARRA SUPERIORE COMPATTA -->
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- Logo + Tagline breve -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-blue-700 text-white flex items-center justify-center shadow-xs">
+          <i data-lucide="activity" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="font-display font-extrabold text-lg text-slate-900 leading-none">Stressa</span>
+          <p class="text-[11px] font-medium text-slate-500 mt-0.5">Burnout prima delle dimissioni</p>
+        </div>
+      </div>
+
+      <!-- Controlli Centrali: Settore + Ruolo -->
+      <div class="flex flex-wrap items-center gap-2">
+        <select id="sector-select" onchange="setSectorFilter(this.value)" class="bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 cursor-pointer focus:outline-none">
+          <option value="all">Tutti i settori</option>
+          <option value="operazioni">Operazioni &amp; Logistica</option>
+          <option value="servizi">Servizi &amp; Vendite</option>
+          <option value="tech">Tech &amp; Uffici</option>
+        </select>
+
+        <div class="flex items-center bg-blue-50 p-1 rounded-xl border border-blue-200/80">
+          <button type="button" onclick="switchRole('hr')" id="role-hr" class="role-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-700 text-white cursor-pointer">HR</button>
+          <button type="button" onclick="switchRole('medico')" id="role-medico" class="role-btn px-2.5 py-1 rounded-lg text-xs font-bold text-blue-800 hover:bg-blue-100 cursor-pointer">Medico</button>
+          <button type="button" onclick="switchRole('checkin')" id="role-checkin" class="role-btn px-2.5 py-1 rounded-lg text-xs font-bold text-blue-800 hover:bg-blue-100 cursor-pointer">Check-in</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENUTO PRINCIPALE -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-5 space-y-5">
+
+    <!-- ================= VISTA HR ================= -->
+    <section id="view-hr" class="role-view space-y-5 pop-in">
+
+      <!-- FILTRI RAPIDI: SETTORE + STATO + CERCA -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" onclick="setSectorFilter('all')" id="sec-all" class="sec-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-700 text-white cursor-pointer">Tutti i settori</button>
+          <button type="button" onclick="setSectorFilter('operazioni')" id="sec-operazioni" class="sec-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Operazioni &amp; Logistica</button>
+          <button type="button" onclick="setSectorFilter('servizi')" id="sec-servizi" class="sec-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Servizi &amp; Vendite</button>
+          <button type="button" onclick="setSectorFilter('tech')" id="sec-tech" class="sec-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer">Tech &amp; Uffici</button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 flex-1 sm:flex-initial justify-end">
+          <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button type="button" onclick="setStatusFilter('all')" id="st-all" class="st-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-900 text-white cursor-pointer">Tutti</button>
+            <button type="button" onclick="setStatusFilter('critical')" id="st-critical" class="st-btn px-2.5 py-1 rounded-lg text-xs font-bold text-red-700 hover:bg-red-50 cursor-pointer">Critico</button>
+            <button type="button" onclick="setStatusFilter('medium')" id="st-medium" class="st-btn px-2.5 py-1 rounded-lg text-xs font-bold text-amber-700 hover:bg-amber-50 cursor-pointer">Medio</button>
+            <button type="button" onclick="setStatusFilter('ok')" id="st-ok" class="st-btn px-2.5 py-1 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-50 cursor-pointer">Ok</button>
+          </div>
+
+          <div class="relative min-w-[180px] flex-1 sm:flex-initial">
+            <input id="dept-search" type="text" oninput="renderGrid()" placeholder="Cerca reparto..." class="w-full bg-slate-100 border border-slate-200 rounded-xl pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500" />
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI ESSENZIALI -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div class="bg-white rounded-2xl border border-slate-200 p-4">
+          <div class="text-[11px] font-bold uppercase text-slate-400">Stress Medio</div>
+          <div id="kpi-avg" class="text-3xl font-display font-extrabold text-slate-900 mt-1">61</div>
+          <div class="mt-2 h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div id="kpi-avg-bar" class="h-full bg-amber-500 rounded-full" style="width:61%"></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 p-4">
+          <div class="text-[11px] font-bold uppercase text-slate-400">Reparti Critici</div>
+          <div id="kpi-crit" class="text-3xl font-display font-extrabold text-red-600 mt-1">2</div>
+          <div id="kpi-crit-sub" class="text-[11px] font-semibold text-slate-500 mt-1">su 6 reparti</div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 p-4">
+          <div class="text-[11px] font-bold uppercase text-slate-400">Rischio Uscite</div>
+          <div id="kpi-exit" class="text-3xl font-display font-extrabold text-amber-600 mt-1">8</div>
+          <div id="kpi-exit-sub" class="text-[11px] font-semibold text-slate-500 mt-1">persone esposte</div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 p-4">
+          <div class="text-[11px] font-bold uppercase text-slate-400">Impatto Evitato</div>
+          <div id="kpi-roi" class="text-3xl font-display font-extrabold text-emerald-600 mt-1">180k €</div>
+          <div id="kpi-roi-sub" class="text-[11px] font-semibold text-slate-500 mt-1">stima turnover</div>
+        </div>
+      </div>
+
+      <!-- CARICAMENTO MULTI-FILE + INVIO CONFERMATO -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col gap-3">
+        <div id="multi-dropzone"
+          onclick="document.getElementById('excel-input').click()"
+          ondragover="handleDropzoneOver(event)"
+          ondragleave="handleDropzoneLeave(event)"
+          ondrop="handleDropzoneDrop(event)"
+          class="w-full border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer transition">
+          <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" multiple class="hidden" onchange="handleExcelUpload(event)" />
+          <div class="flex items-center gap-3.5 min-w-0">
+            <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+              <i data-lucide="files" class="w-6 h-6"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-extrabold text-slate-900">Carica file Excel / CSV</span>
+                <span id="files-count-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700">0 file</span>
+              </div>
+              <div id="file-status-label" class="text-xs text-slate-500 truncate mt-0.5">Seleziona o trascina Paghe, Assenze e Straordinari, poi clicca Invia Dati</div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 shrink-0" onclick="event.stopPropagation()">
+            <button type="button" onclick="downloadDemoBundle()" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold cursor-pointer transition">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Scarica Demo (.zip)</span>
+            </button>
+            <button type="button" onclick="downloadAllTestZip()" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold cursor-pointer transition">
+              <i data-lucide="archive" class="w-3.5 h-3.5"></i>
+              <span>Tutti i File Test (.zip)</span>
+            </button>
+            <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              Privacy ≥6 · Anonimo
+            </span>
+          </div>
+        </div>
+
+        <!-- Coda file selezionati + Pulsante esplicito Invia Dati -->
+        <div id="pending-upload-bar" class="hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-200">
+          <div id="uploaded-files-chips" class="flex flex-wrap gap-1.5"></div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" onclick="clearPendingFiles()" class="px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 text-xs font-bold cursor-pointer transition">
+              Annulla
+            </button>
+            <button type="button" id="submit-files-btn" onclick="submitSelectedFiles()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-extrabold shadow-xs cursor-pointer transition">
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+              <span>Invia ed Elabora Dati</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Banner Feedback Conferma Caricamento & Report Aggiornato -->
+        <div id="upload-feedback-banner" class="hidden flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 pop-in">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+              <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div id="upload-feedback-title" class="text-xs font-extrabold text-emerald-950">File caricato — Report aggiornato</div>
+              <div id="upload-feedback-sub" class="text-[11px] font-medium text-emerald-800">Dati elaborati e indici per reparto ricalcolati</div>
+            </div>
+          </div>
+          <span id="upload-feedback-time" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-700 self-start sm:self-center">Aggiornato ora</span>
+        </div>
+      </div>
+
+      <!-- GRIGLIA REPARTI SOTTO STRESS -->
+      <div id="departments-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+      <!-- GRAFICO ESSENZIALE -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-extrabold uppercase text-slate-500">Indice Stress per Reparto</span>
+          <span class="text-[11px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-md">Soglia Critica 75</span>
+        </div>
+        <div class="h-52 relative">
+          <canvas id="stressChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VISTA MEDICO ================= -->
+    <section id="view-medico" class="role-view hidden pop-in">
+      <div class="bg-white rounded-2xl border border-slate-200 p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <i data-lucide="stethoscope" class="w-5 h-5 text-emerald-700"></i>
+            <h2 class="font-display font-extrabold text-lg text-slate-900">Casi Anonimi</h2>
+          </div>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">GDPR · Pseudonimo</span>
+        </div>
+
+        <div id="medico-list" class="divide-y divide-slate-100"></div>
+      </div>
+    </section>
+
+    <!-- ================= VISTA CHECK-IN (30 SEC) ================= -->
+    <section id="view-checkin" class="role-view hidden max-w-xl mx-auto pop-in">
+      <form onsubmit="submitCheckin(event)" class="bg-white rounded-2xl border border-slate-200 p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="font-display font-extrabold text-lg text-slate-900">Check-in Rapido</h2>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">30 sec · 1–5</span>
+        </div>
+
+        <select id="checkin-dept" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"></select>
+
+        <div class="space-y-3">
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800">Stanchezza a fine turno</span>
+              <span class="text-[10px] font-semibold text-slate-400">1 = Poca · 5 = Molta</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5 text-center">
+              <label class="cursor-pointer"><input type="radio" name="c1" value="1" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">1</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c1" value="2" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">2</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c1" value="3" checked class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">3</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c1" value="4" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">4</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c1" value="5" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">5</div></label>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800">Recupero tra i turni</span>
+              <span class="text-[10px] font-semibold text-slate-400">1 = Scarso · 5 = Ottimo</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5 text-center">
+              <label class="cursor-pointer"><input type="radio" name="c2" value="1" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">1</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c2" value="2" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">2</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c2" value="3" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">3</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c2" value="4" checked class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">4</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c2" value="5" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">5</div></label>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800">Sovraccarico / Pressione</span>
+              <span class="text-[10px] font-semibold text-slate-400">1 = Bassa · 5 = Alta</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5 text-center">
+              <label class="cursor-pointer"><input type="radio" name="c3" value="1" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">1</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c3" value="2" checked class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">2</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c3" value="3" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">3</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c3" value="4" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">4</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c3" value="5" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">5</div></label>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800">Qualità del sonno</span>
+              <span class="text-[10px] font-semibold text-slate-400">1 = Pessima · 5 = Ottima</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5 text-center">
+              <label class="cursor-pointer"><input type="radio" name="c4" value="1" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">1</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c4" value="2" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">2</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c4" value="3" checked class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">3</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c4" value="4" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">4</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c4" value="5" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">5</div></label>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800">Rapporto con i colleghi</span>
+              <span class="text-[10px] font-semibold text-slate-400">1 = Difficile · 5 = Ottimo</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5 text-center">
+              <label class="cursor-pointer"><input type="radio" name="c5" value="1" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">1</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c5" value="2" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">2</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c5" value="3" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">3</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c5" value="4" checked class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">4</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c5" value="5" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">5</div></label>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-800">Rapporto con il responsabile / capo</span>
+              <span class="text-[10px] font-semibold text-slate-400">1 = Difficile · 5 = Ottimo</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5 text-center">
+              <label class="cursor-pointer"><input type="radio" name="c6" value="1" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">1</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c6" value="2" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">2</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c6" value="3" checked class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">3</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c6" value="4" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">4</div></label>
+              <label class="cursor-pointer"><input type="radio" name="c6" value="5" class="peer sr-only" /><div class="py-1.5 rounded-lg border bg-white peer-checked:bg-blue-700 peer-checked:text-white text-xs font-bold">5</div></label>
+            </div>
+          </div>
+        </div>
+
+        <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+          <input type="checkbox" id="checkin-med" checked class="rounded text-blue-700" />
+          <span>Contatto solo Medico</span>
+        </label>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold cursor-pointer transition">
+          Invia
+        </button>
+      </form>
+    </section>
+  </main>
+
+  <!-- MODALE SNELLO AZIONI CORRETTIVE -->
+  <div id="actions-modal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 max-w-lg w-full overflow-hidden shadow-xl pop-in">
+      <div class="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h3 id="modal-title" class="font-display font-extrabold text-base text-slate-900">Reparto</h3>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs font-bold text-slate-500">Score: <strong id="modal-base" class="text-slate-900">84</strong></span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span class="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">Stimato: <strong id="modal-sim">84</strong></span>
+          </div>
+        </div>
+        <button type="button" onclick="closeActionsModal()" class="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-slate-800 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div id="modal-actions-body" class="p-5 space-y-2.5 max-h-[65vh] overflow-y-auto"></div>
+
+      <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button type="button" onclick="closeActionsModal()" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold cursor-pointer">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE_URL = (window.STRESSA_API_URL || localStorage.getItem('stressa_api_url') || 'http://localhost:8000').replace(/\/+$/, '');
+
+    const DATA = {
+      operazioni: {
+        departments: [
+          {
+            id: 'prod', name: 'Produzione & Operazioni', headcount: 58, score: 84,
+            driver: 'Turni & Straordinari',
+            metrics: { riposi: '34%', assenze: '4.3g', carico: '116%' },
+            actions: [
+              { id: 'op1', label: 'Riduci turni ravvicinati <11h', delta: -12, active: true },
+              { id: 'op2', label: 'Rinforzo organico nei picchi', delta: -10, active: false },
+              { id: 'op3', label: 'Tetto straordinari mensili', delta: -6, active: false }
+            ]
+          },
+          {
+            id: 'log', name: 'Logistica & Magazzino', headcount: 42, score: 78,
+            driver: 'Carico & Scadenze',
+            metrics: { riposi: '27%', assenze: '3.8g', carico: '112%' },
+            actions: [
+              { id: 'op4', label: 'Ribilancia turni spedizioni', delta: -11, active: true },
+              { id: 'op5', label: 'Rotazione postazioni ad alta intensità', delta: -8, active: false }
+            ]
+          }
+        ]
+      },
+      servizi: {
+        departments: [
+          {
+            id: 'sales', name: 'Vendite & Commerciale', headcount: 36, score: 76,
+            driver: 'Target & Pressione',
+            metrics: { riposi: '19%', assenze: '3.1g', carico: '114%' },
+            actions: [
+              { id: 'sv1', label: 'Ribilancia portafogli clienti', delta: -12, active: true },
+              { id: 'sv2', label: 'Finestre senza riunioni operative', delta: -7, active: false }
+            ]
+          },
+          {
+            id: 'care', name: 'Customer Care & Supporto', headcount: 28, score: 63,
+            driver: 'Picchi Richieste',
+            metrics: { riposi: '12%', assenze: '2.6g', carico: '96%' },
+            actions: [
+              { id: 'sv3', label: 'Turni flessibili nelle fasce di punta', delta: -9, active: false }
+            ]
+          }
+        ]
+      },
+      tech: {
+        departments: [
+          {
+            id: 'itsw', name: 'IT & Sviluppo', headcount: 34, score: 59,
+            driver: 'Scadenze Rilasci',
+            metrics: { riposi: '9%', assenze: '2.1g', carico: '94%' },
+            actions: [
+              { id: 'tc1', label: 'Cap allocazione progetti al 90%', delta: -11, active: false },
+              { id: 'tc2', label: 'Buffer tecnico tra sprint', delta: -7, active: false }
+            ]
+          },
+          {
+            id: 'ammhr', name: 'Amministrazione & HR', headcount: 16, score: 37,
+            driver: 'Equilibrato',
+            metrics: { riposi: '2%', assenze: '1.2g', carico: '78%' },
+            actions: []
+          }
+        ]
+      }
+    };
+
+    const MEDICO_CASES = [
+      { code: '#M-104', dept: 'Produzione & Operazioni', score: '4.2 / 5', status: 'Da contattare' },
+      { code: '#M-118', dept: 'Logistica & Magazzino', score: '3.9 / 5', status: 'Da contattare' },
+      { code: '#M-129', dept: 'Vendite & Commerciale', score: '3.7 / 5', status: 'In carico' }
+    ];
+
+    let currentSector = 'all';
+    let currentStatus = 'all';
+    let modalDeptId = null;
+    let chartObj = null;
+    let apiOnline = false;
+    let pendingFiles = [];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      renderAll();
+      checkApiHealth();
+    });
+
+    async function checkApiHealth() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/v1/health`, { method: 'GET' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        apiOnline = true;
+        await fetchDepartmentsFromApi();
+      } catch {
+        apiOnline = false;
+      }
+    }
+
+    function getAllDepartments() {
+      return Object.entries(DATA).flatMap(([sector, obj]) =>
+        (obj.departments || []).map(d => ({ ...d, sector: d.sector || sector }))
+      );
+    }
+
+    function findDepartmentById(deptId) {
+      for (const obj of Object.values(DATA)) {
+        const found = (obj.departments || []).find(d => d.id === deptId);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    async function fetchDepartmentsFromApi() {
+      if (!apiOnline) return;
+      try {
+        const sectorQuery = currentSector === 'all' ? '' : `?sector=${encodeURIComponent(currentSector)}`;
+        const res = await fetch(`${API_BASE_URL}/api/v1/departments${sectorQuery}`);
+        if (!res.ok) return;
+        const list = await res.json();
+        if (Array.isArray(list) && list.length) {
+          const targetSector = currentSector === 'all' ? 'operazioni' : currentSector;
+          DATA[targetSector].departments = list.map((d, idx) => ({
+            id: d.id || `api-${idx}`,
+            name: d.name,
+            sector: d.sector || targetSector,
+            headcount: Number(d.headcount || 10),
+            score: Number(d.stress_score ?? d.score ?? 50),
+            driver: d.primary_driver || d.driver || 'Carico Operativo',
+            metrics: {
+              riposi: `${d.quick_turnarounds_pct ?? 12}%`,
+              assenze: `${d.absenteeism_pct ?? 3.5}%`,
+              carico: `${d.workload_index ?? 60}%`
+            },
+            actions: (d.recommended_actions || []).map((a, i) => ({
+              id: a.id || `a-${i}`,
+              label: a.title || a.label || 'Azione correttiva',
+              delta: -Math.abs(Number(a.impact_points ?? a.delta ?? 8)),
+              active: a.status === 'in_progress' || a.status === 'done'
+            }))
+          }));
+          renderAll();
+        }
+      } catch {
+        apiOnline = false;
+      }
+    }
+
+    function hashPseudo(raw) {
+      let h = 2166136261;
+      const str = String(raw || 'ID');
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return `#EMP-${(h >>> 0).toString(16).toUpperCase().padStart(6, '0').slice(0, 6)}`;
+    }
+
+    function switchRole(role) {
+      document.querySelectorAll('.role-view').forEach(v => v.classList.add('hidden'));
+      document.getElementById(`view-${role}`).classList.remove('hidden');
+
+      document.querySelectorAll('.role-btn').forEach(b => {
+        b.classList.remove('bg-blue-700', 'text-white');
+        b.classList.add('text-blue-800', 'hover:bg-blue-100');
+      });
+      const active = document.getElementById(`role-${role}`);
+      active.classList.remove('text-blue-800', 'hover:bg-blue-100');
+      active.classList.add('bg-blue-700', 'text-white');
+
+      if (role === 'hr') renderChart();
+      lucide.createIcons();
+    }
+
+    function setSectorFilter(val) {
+      currentSector = val;
+      currentStatus = 'all';
+      const topSelect = document.getElementById('sector-select');
+      if (topSelect && topSelect.value !== val) topSelect.value = val;
+      updateSectorButtons();
+      updateStatusButtons();
+      renderAll();
+      if (apiOnline) fetchDepartmentsFromApi();
+    }
+
+    function updateSectorButtons() {
+      document.querySelectorAll('.sec-btn').forEach(b => {
+        b.classList.remove('bg-blue-700', 'text-white');
+        b.classList.add('bg-slate-100', 'text-slate-700', 'hover:bg-slate-200');
+      });
+      const active = document.getElementById(`sec-${currentSector}`);
+      if (active) {
+        active.classList.remove('bg-slate-100', 'text-slate-700', 'hover:bg-slate-200');
+        active.classList.add('bg-blue-700', 'text-white');
+      }
+    }
+
+    function setStatusFilter(st) {
+      currentStatus = st;
+      updateStatusButtons();
+      renderGrid();
+    }
+
+    function updateStatusButtons() {
+      document.querySelectorAll('.st-btn').forEach(b => {
+        b.classList.remove('bg-slate-900', 'text-white');
+      });
+      const active = document.getElementById(`st-${currentStatus}`);
+      if (active) active.classList.add('bg-slate-900', 'text-white');
+    }
+
+    function getStatusInfo(score) {
+      if (score >= 75) return { key: 'critical', label: 'Critico', badge: 'bg-red-50 text-red-700 border-red-200', bar: 'bg-red-500', num: 'text-red-600' };
+      if (score >= 50) return { key: 'medium', label: 'Medio', badge: 'bg-amber-50 text-amber-700 border-amber-200', bar: 'bg-amber-500', num: 'text-amber-600' };
+      return { key: 'ok', label: 'Ok', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', bar: 'bg-emerald-500', num: 'text-emerald-600' };
+    }
+
+    function renderAll() {
+      const pool = currentSector === 'all' ? getAllDepartments() : (DATA[currentSector]?.departments || []);
+      const depts = pool.filter(d => d.headcount >= 6);
+      const avg = Math.round(depts.reduce((s, d) => s + d.score, 0) / (depts.length || 1));
+      const crit = depts.filter(d => d.score >= 75).length;
+      const exitRisk = crit * 3 + depts.filter(d => d.score >= 50 && d.score < 75).length;
+      const roi = Math.max(45, Math.max(1, Math.round(exitRisk * 0.45)) * 45);
+
+      document.getElementById('kpi-avg').textContent = avg;
+      const avgBar = document.getElementById('kpi-avg-bar');
+      avgBar.style.width = `${avg}%`;
+      avgBar.className = `h-full rounded-full ${avg >= 75 ? 'bg-red-500' : avg >= 50 ? 'bg-amber-500' : 'bg-emerald-500'}`;
+
+      document.getElementById('kpi-crit').textContent = crit;
+      document.getElementById('kpi-crit-sub').textContent = `su ${depts.length} reparti`;
+      document.getElementById('kpi-exit').textContent = exitRisk;
+      document.getElementById('kpi-roi').textContent = `${roi}k €`;
+
+      document.getElementById('checkin-dept').innerHTML = depts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+
+      renderGrid();
+      renderMedico();
+      renderChart();
+      lucide.createIcons();
+    }
+
+    function renderGrid() {
+      const q = (document.getElementById('dept-search')?.value || '').trim().toLowerCase();
+      const pool = currentSector === 'all' ? getAllDepartments() : (DATA[currentSector]?.departments || []);
+      const depts = pool
+        .filter(d => d.headcount >= 6)
+        .filter(d => currentStatus === 'all' || getStatusInfo(d.score).key === currentStatus)
+        .filter(d => !q || d.name.toLowerCase().includes(q) || (d.driver || '').toLowerCase().includes(q))
+        .sort((a, b) => b.score - a.score);
+
+      const grid = document.getElementById('departments-grid');
+      if (!depts.length) {
+        grid.innerHTML = `<div class="col-span-full bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs font-bold text-slate-400">Nessun reparto (soglia ≥6)</div>`;
+        return;
+      }
+
+      grid.innerHTML = depts.map(d => {
+        const st = getStatusInfo(d.score);
+        const activeCount = (d.actions || []).filter(a => a.active).length;
+        const driver = d.driver || (d.score >= 75 ? 'Rientri <11h' : d.score >= 50 ? 'Carico Turni' : 'Equilibrato');
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col justify-between gap-3.5 hover:border-blue-300 transition">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-bold border ${st.badge}">${st.label}</span>
+                  <span class="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">${driver}</span>
+                </div>
+                <h3 class="font-display font-extrabold text-base text-slate-900 mt-1.5">${d.name}</h3>
+                <span class="text-[11px] font-semibold text-slate-400">${d.headcount} addetti</span>
+              </div>
+              <div class="text-3xl font-display font-extrabold ${st.num}">${d.score}</div>
+            </div>
+
+            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full ${st.bar} rounded-full" style="width:${Math.min(100, Math.max(0, d.score))}%"></div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center bg-slate-50 rounded-xl p-2 border border-slate-100">
+              <div>
+                <div class="text-[10px] font-bold text-slate-400">Riposi &lt;11h</div>
+                <div class="text-xs font-extrabold text-slate-800">${d.metrics?.riposi ?? '10%'}</div>
+              </div>
+              <div>
+                <div class="text-[10px] font-bold text-slate-400">Assenze</div>
+                <div class="text-xs font-extrabold text-slate-800">${d.metrics?.assenze ?? '2.5g'}</div>
+              </div>
+              <div>
+                <div class="text-[10px] font-bold text-slate-400">Carico</div>
+                <div class="text-xs font-extrabold text-slate-800">${d.metrics?.carico ?? '95%'}</div>
+              </div>
+            </div>
+
+            <button type="button" onclick="openActionsModal('${d.id}')" class="w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-blue-800 text-white text-xs font-bold flex items-center justify-between cursor-pointer transition">
+              <span>Azioni &amp; Simulatore</span>
+              <span class="px-2 py-0.5 rounded-md bg-white/15 text-[11px]">${activeCount} attive</span>
+            </button>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function openActionsModal(deptId) {
+      const dept = findDepartmentById(deptId);
+      if (!dept) return;
+      modalDeptId = deptId;
+
+      document.getElementById('modal-title').textContent = dept.name;
+      document.getElementById('modal-base').textContent = dept.score;
+
+      const body = document.getElementById('modal-actions-body');
+      const actions = dept.actions || [];
+      if (!actions.length) {
+        body.innerHTML = `<div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">Reparto in equilibrio: nessuna azione correttiva urgente.</div>`;
+      } else {
+        body.innerHTML = actions.map((a, idx) => `
+          <label class="flex items-center justify-between gap-3 p-3 rounded-xl border ${a.active ? 'bg-blue-50/70 border-blue-200' : 'bg-slate-50 border-slate-200'} cursor-pointer transition">
+            <div class="flex items-center gap-2.5">
+              <input type="checkbox" ${a.active ? 'checked' : ''} onchange="toggleAction(${idx}, this.checked)" class="w-4 h-4 rounded text-blue-700 cursor-pointer" />
+              <span class="text-xs font-bold text-slate-800">${a.label}</span>
+            </div>
+            <span class="text-xs font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md shrink-0">${a.delta} pt</span>
+          </label>
+        `).join('');
+      }
+
+      updateModalSimulatedScore(dept);
+      document.getElementById('actions-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function updateModalSimulatedScore(dept) {
+      const deltaSum = (dept.actions || [])
+        .filter(a => a.active)
+        .reduce((sum, a) => sum + Number(a.delta || 0), 0);
+      const sim = Math.max(10, Math.min(100, Math.round(dept.score + deltaSum)));
+      document.getElementById('modal-sim').textContent = sim;
+    }
+
+    async function toggleAction(actionIdx, isChecked) {
+      const dept = findDepartmentById(modalDeptId);
+      if (!dept || !dept.actions?.[actionIdx]) return;
+      const act = dept.actions[actionIdx];
+      act.active = isChecked;
+      updateModalSimulatedScore(dept);
+      renderGrid();
+
+      if (apiOnline) {
+        try {
+          await fetch(`${API_BASE_URL}/api/v1/departments/${encodeURIComponent(dept.id)}/actions`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action_id: act.id,
+              status: isChecked ? 'in_progress' : 'todo'
+            })
+          });
+        } catch {}
+      }
+    }
+
+    function closeActionsModal() {
+      modalDeptId = null;
+      document.getElementById('actions-modal').classList.add('hidden');
+    }
+
+    function rowsToCsv(rows) {
+      if (!rows || !rows.length) return '';
+      const headers = Object.keys(rows[0]);
+      const escapeCsv = (val) => {
+        const str = String(val ?? '');
+        return /[",\n;]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+      };
+      return [
+        headers.join(','),
+        ...rows.map(r => headers.map(h => escapeCsv(r[h])).join(','))
+      ].join('\n');
+    }
+
+    function rowsToXlsxArrayBuffer(rows, sheetName = 'Dati') {
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName);
+      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      return out instanceof Uint8Array ? out : new Uint8Array(out);
+    }
+
+    function triggerZipDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function buildDemoDatasets() {
+      const pagheRows = [
+        { Reparto: 'Produzione & Operazioni', Addetti: 58, Carico: '116%', Retribuzione_Media_Lorda: 29500, Matricola: 'EMP-101' },
+        { Reparto: 'Logistica & Magazzino', Addetti: 42, Carico: '112%', Retribuzione_Media_Lorda: 27800, Matricola: 'EMP-102' },
+        { Reparto: 'Vendite & Commerciale', Addetti: 36, Carico: '114%', Retribuzione_Media_Lorda: 33200, Matricola: 'EMP-103' },
+        { Reparto: 'Customer Care & Supporto', Addetti: 28, Carico: '96%', Retribuzione_Media_Lorda: 26400, Matricola: 'EMP-104' },
+        { Reparto: 'IT & Sviluppo', Addetti: 34, Carico: '94%', Retribuzione_Media_Lorda: 41500, Matricola: 'EMP-105' },
+        { Reparto: 'Amministrazione & HR', Addetti: 16, Carico: '78%', Retribuzione_Media_Lorda: 31000, Matricola: 'EMP-106' }
+      ];
+
+      const assenzeRows = [
+        { Reparto: 'Produzione & Operazioni', Assenze: '4.3g', Assenze_Brevi: 14, Ferie_Residue_Gg: 16.5, Matricola: 'EMP-101' },
+        { Reparto: 'Logistica & Magazzino', Assenze: '3.8g', Assenze_Brevi: 10, Ferie_Residue_Gg: 14.0, Matricola: 'EMP-102' },
+        { Reparto: 'Vendite & Commerciale', Assenze: '3.1g', Assenze_Brevi: 8, Ferie_Residue_Gg: 12.5, Matricola: 'EMP-103' },
+        { Reparto: 'Customer Care & Supporto', Assenze: '2.6g', Assenze_Brevi: 5, Ferie_Residue_Gg: 9.5, Matricola: 'EMP-104' },
+        { Reparto: 'IT & Sviluppo', Assenze: '2.1g', Assenze_Brevi: 4, Ferie_Residue_Gg: 8.0, Matricola: 'EMP-105' },
+        { Reparto: 'Amministrazione & HR', Assenze: '1.2g', Assenze_Brevi: 1, Ferie_Residue_Gg: 5.5, Matricola: 'EMP-106' }
+      ];
+
+      const strRows = [
+        { Reparto: 'Produzione & Operazioni', Straordinari: '14h', Riposi_11h: '34%', Ore_Straordinario_Totali: 812, Matricola: 'EMP-101' },
+        { Reparto: 'Logistica & Magazzino', Straordinari: '11h', Riposi_11h: '27%', Ore_Straordinario_Totali: 462, Matricola: 'EMP-102' },
+        { Reparto: 'Vendite & Commerciale', Straordinari: '9h', Riposi_11h: '19%', Ore_Straordinario_Totali: 324, Matricola: 'EMP-103' },
+        { Reparto: 'Customer Care & Supporto', Straordinari: '6h', Riposi_11h: '12%', Ore_Straordinario_Totali: 168, Matricola: 'EMP-104' },
+        { Reparto: 'IT & Sviluppo', Straordinari: '5h', Riposi_11h: '9%', Ore_Straordinario_Totali: 170, Matricola: 'EMP-105' },
+        { Reparto: 'Amministrazione & HR', Straordinari: '1h', Riposi_11h: '2%', Ore_Straordinario_Totali: 16, Matricola: 'EMP-106' }
+      ];
+
+      return { pagheRows, assenzeRows, strRows };
+    }
+
+    async function downloadDemoBundle() {
+      if (typeof JSZip === 'undefined') {
+        toast('Libreria ZIP non disponibile', 'warning');
+        return;
+      }
+      const { pagheRows, assenzeRows, strRows } = buildDemoDatasets();
+      const zip = new JSZip();
+
+      zip.file('01_demo_paghe_organico.csv', rowsToCsv(pagheRows));
+      zip.file('02_demo_assenze.csv', rowsToCsv(assenzeRows));
+      zip.file('03_demo_straordinari.csv', rowsToCsv(strRows));
+
+      zip.file('01_demo_paghe_organico.xlsx', rowsToXlsxArrayBuffer(pagheRows, 'Paghe_Organico'));
+      zip.file('02_demo_assenze.xlsx', rowsToXlsxArrayBuffer(assenzeRows, 'Assenze'));
+      zip.file('03_demo_straordinari.xlsx', rowsToXlsxArrayBuffer(strRows, 'Straordinari'));
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      triggerZipDownload(blob, 'stressa_demo_3_file.zip');
+      toast('Archivio stressa_demo_3_file.zip scaricato', 'success');
+    }
+
+    async function downloadAllTestZip() {
+      if (typeof JSZip === 'undefined') {
+        toast('Libreria ZIP non disponibile', 'warning');
+        return;
+      }
+      const { pagheRows, assenzeRows, strRows } = buildDemoDatasets();
+      const zip = new JSZip();
+
+      const reperibilitaRows = [
+        { Reparto: 'Produzione & Operazioni', Riposi_11h: '36%', Straordinari: '15h', Turni_Weekend_Pct: '48%', Reperibilita_Ore: 42, Matricola: 'EMP-201' },
+        { Reparto: 'Logistica & Magazzino', Riposi_11h: '29%', Straordinari: '12h', Turni_Weekend_Pct: '41%', Reperibilita_Ore: 28, Matricola: 'EMP-202' },
+        { Reparto: 'Vendite & Commerciale', Riposi_11h: '18%', Straordinari: '10h', Turni_Weekend_Pct: '22%', Reperibilita_Ore: 14, Matricola: 'EMP-203' },
+        { Reparto: 'Customer Care & Supporto', Riposi_11h: '14%', Straordinari: '7h', Turni_Weekend_Pct: '25%', Reperibilita_Ore: 18, Matricola: 'EMP-204' },
+        { Reparto: 'IT & Sviluppo', Riposi_11h: '8%', Straordinari: '6h', Turni_Weekend_Pct: '15%', Reperibilita_Ore: 24, Matricola: 'EMP-205' },
+        { Reparto: 'Amministrazione & HR', Riposi_11h: '2%', Straordinari: '2h', Turni_Weekend_Pct: '4%', Reperibilita_Ore: 0, Matricola: 'EMP-206' }
+      ];
+
+      const ferieRows = [
+        { Reparto: 'Produzione & Operazioni', Assenze: '4.5g', Ferie_Non_Godute_Gg: 21.0, ROL_Residui_Ore: 34, Permessi_Urgenti: 19, Matricola: 'EMP-301' },
+        { Reparto: 'Logistica & Magazzino', Assenze: '3.9g', Ferie_Non_Godute_Gg: 17.5, ROL_Residui_Ore: 26, Permessi_Urgenti: 15, Matricola: 'EMP-302' },
+        { Reparto: 'Vendite & Commerciale', Assenze: '3.4g', Ferie_Non_Godute_Gg: 15.0, ROL_Residui_Ore: 22, Permessi_Urgenti: 11, Matricola: 'EMP-303' },
+        { Reparto: 'Customer Care & Supporto', Assenze: '2.8g', Ferie_Non_Godute_Gg: 12.0, ROL_Residui_Ore: 18, Permessi_Urgenti: 9, Matricola: 'EMP-304' },
+        { Reparto: 'IT & Sviluppo', Assenze: '2.2g', Ferie_Non_Godute_Gg: 10.5, ROL_Residui_Ore: 15, Permessi_Urgenti: 6, Matricola: 'EMP-305' },
+        { Reparto: 'Amministrazione & HR', Assenze: '1.1g', Ferie_Non_Godute_Gg: 6.0, ROL_Residui_Ore: 8, Permessi_Urgenti: 2, Matricola: 'EMP-306' }
+      ];
+
+      const caricoRows = [
+        { Reparto: 'Produzione & Operazioni', Addetti: 58, Carico: '122%', Straordinari: '16h', Riposi_11h: '38%', Assenze: '4.6g', Matricola: 'EMP-401' },
+        { Reparto: 'Logistica & Magazzino', Addetti: 42, Carico: '115%', Straordinari: '12h', Riposi_11h: '28%', Assenze: '3.9g', Matricola: 'EMP-402' },
+        { Reparto: 'Vendite & Commerciale', Addetti: 36, Carico: '110%', Straordinari: '9h', Riposi_11h: '17%', Assenze: '3.0g', Matricola: 'EMP-403' },
+        { Reparto: 'Customer Care & Supporto', Addetti: 28, Carico: '104%', Straordinari: '8h', Riposi_11h: '15%', Assenze: '2.9g', Matricola: 'EMP-404' },
+        { Reparto: 'Micro Team Pilot', Addetti: 4, Carico: '130%', Straordinari: '20h', Riposi_11h: '50%', Assenze: '7.0g', Matricola: 'EMP-405' },
+        { Reparto: 'Amministrazione & HR', Addetti: 16, Carico: '76%', Straordinari: '2h', Riposi_11h: '2%', Assenze: '1.1g', Matricola: 'EMP-406' }
+      ];
+
+      zip.file('test_paghe.csv', rowsToCsv(pagheRows));
+      zip.file('test_assenze.csv', rowsToCsv(assenzeRows));
+      zip.file('test_straordinari.csv', rowsToCsv(strRows));
+      zip.file('test_reperibilita_turni.csv', rowsToCsv(reperibilitaRows));
+      zip.file('test_ferie_permessi.csv', rowsToCsv(ferieRows));
+      zip.file('test_carico_operativo.csv', rowsToCsv(caricoRows));
+
+      zip.file('test_paghe_organico.xlsx', rowsToXlsxArrayBuffer(pagheRows, 'Paghe'));
+      zip.file('test_assenze_straordinari.xlsx', rowsToXlsxArrayBuffer(strRows, 'Turni_Straordinari'));
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      triggerZipDownload(blob, 'stressa_tutti_file_test.zip');
+      toast('Archivio stressa_tutti_file_test.zip scaricato', 'success');
+    }
+
+    function handleDropzoneOver(e) {
+      e.preventDefault();
+      document.getElementById('multi-dropzone').classList.add('border-blue-500', 'bg-blue-50/50');
+    }
+
+    function handleDropzoneLeave(e) {
+      e.preventDefault();
+      document.getElementById('multi-dropzone').classList.remove('border-blue-500', 'bg-blue-50/50');
+    }
+
+    function handleDropzoneDrop(e) {
+      e.preventDefault();
+      document.getElementById('multi-dropzone').classList.remove('border-blue-500', 'bg-blue-50/50');
+      const files = Array.from(e.dataTransfer?.files || []);
+      if (files.length) stageSelectedFiles(files);
+    }
+
+    function detectFileCategory(filename) {
+      const f = filename.toLowerCase();
+      if (f.includes('pagh') || f.includes('organ') || f.includes('anag')) return 'Paghe';
+      if (f.includes('assenz') || f.includes('malatt') || f.includes('ferie')) return 'Assenze';
+      if (f.includes('straord') || f.includes('turn') || f.includes('ore')) return 'Straordinari';
+      return 'File Dati';
+    }
+
+    function parseNumericValue(val, fallback = 0) {
+      if (val === undefined || val === null || val === '') return fallback;
+      const num = parseFloat(String(val).replace(',', '.').replace(/[^0-9.-]/g, ''));
+      return Number.isFinite(num) ? num : fallback;
+    }
+
+    function renderPendingFiles() {
+      const bar = document.getElementById('pending-upload-bar');
+      const box = document.getElementById('uploaded-files-chips');
+      const badge = document.getElementById('files-count-badge');
+      if (!pendingFiles.length) {
+        bar.classList.add('hidden');
+        badge.classList.add('hidden');
+        document.getElementById('file-status-label').textContent = 'Seleziona o trascina Paghe, Assenze e Straordinari, poi clicca Invia Dati';
+        return;
+      }
+      badge.classList.remove('hidden');
+      badge.textContent = `${pendingFiles.length} pronti`;
+      bar.classList.remove('hidden');
+      document.getElementById('file-status-label').textContent = `${pendingFiles.length} file pronti per l'invio — clicca "Invia ed Elabora Dati"`;
+      box.innerHTML = pendingFiles.map((f, idx) => `
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white text-slate-800 border border-slate-200 text-[11px] font-bold">
+          <span class="px-1.5 py-0.5 rounded bg-blue-700 text-white text-[9px] uppercase">${detectFileCategory(f.name)}</span>
+          <span class="truncate max-w-[150px]">${f.name}</span>
+          <button type="button" onclick="removePendingFile(${idx})" class="text-slate-400 hover:text-red-600 cursor-pointer ml-0.5" title="Rimuovi">×</button>
+        </span>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function stageSelectedFiles(files) {
+      const existingNames = new Set(pendingFiles.map(f => f.name));
+      files.forEach(f => {
+        if (!existingNames.has(f.name)) {
+          pendingFiles.push(f);
+        } else {
+          const i = pendingFiles.findIndex(x => x.name === f.name);
+          if (i >= 0) pendingFiles[i] = f;
+        }
+      });
+      document.getElementById('upload-feedback-banner').classList.add('hidden');
+      renderPendingFiles();
+    }
+
+    function removePendingFile(idx) {
+      pendingFiles.splice(idx, 1);
+      renderPendingFiles();
+    }
+
+    function clearPendingFiles() {
+      pendingFiles = [];
+      renderPendingFiles();
+    }
+
+    function handleExcelUpload(e) {
+      const files = Array.from(e.target.files || []);
+      if (!files.length) return;
+      stageSelectedFiles(files);
+      e.target.value = '';
+    }
+
+    function showUploadSuccessFeedback(fileNames, deptsCount) {
+      const banner = document.getElementById('upload-feedback-banner');
+      const title = document.getElementById('upload-feedback-title');
+      const sub = document.getElementById('upload-feedback-sub');
+      const timeBadge = document.getElementById('upload-feedback-time');
+
+      const isSingle = fileNames.length === 1;
+      title.textContent = isSingle
+        ? `File caricato ("${fileNames[0]}") — Report aggiornato`
+        : `${fileNames.length} file caricati — Report aggiornato`;
+      sub.textContent = `Acquisiti: ${fileNames.join(' · ')} · ${deptsCount} reparti aggiornati (anonimato ≥6 attivo)`;
+
+      const now = new Date();
+      timeBadge.textContent = `Aggiornato alle ${now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+
+      banner.classList.remove('hidden');
+      document.getElementById('file-status-label').textContent = `Ultimo invio completato: ${fileNames.join(', ')}`;
+      lucide.createIcons();
+    }
+
+    async function submitSelectedFiles() {
+      if (!pendingFiles.length) {
+        toast('Seleziona prima almeno un file', 'warning');
+        return;
+      }
+
+      const btn = document.getElementById('submit-files-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-70');
+      }
+
+      const filesToSend = [...pendingFiles];
+      await processMultipleFiles(filesToSend);
+
+      pendingFiles = [];
+      renderPendingFiles();
+
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70');
+      }
+    }
+
+    async function processMultipleFiles(files) {
+      const targetSector = currentSector === 'all' ? 'operazioni' : currentSector;
+      const fileNames = files.map(f => f.name);
+
+      if (apiOnline) {
+        try {
+          const formData = new FormData();
+          files.forEach(f => formData.append('files', f));
+          formData.append('file', files[0]);
+          formData.append('sector', targetSector);
+          formData.append('connector', 'multi_excel_csv');
+
+          const res = await fetch(`${API_BASE_URL}/api/v1/ingest/upload`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (res.ok) {
+            const payload = await res.json();
+            await fetchDepartmentsFromApi();
+            const count = payload.departments_updated ?? getAllDepartments().length;
+            showUploadSuccessFeedback(fileNames, count);
+            toast('File caricato! Report aggiornato', 'success');
+            return;
+          }
+        } catch {
+          apiOnline = false;
+        }
+      }
+
+      try {
+        const mergedMap = new Map();
+
+        for (const file of files) {
+          const buffer = await file.arrayBuffer();
+          const wb = XLSX.read(new Uint8Array(buffer), { type: 'array' });
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+
+          rows.forEach((r, idx) => {
+            const rawDept = r.Reparto || r.reparto || r.UO || r.Unita_Operativa;
+            if (!rawDept) return;
+            const deptName = String(rawDept).trim();
+            const key = deptName.toLowerCase();
+
+            if (!mergedMap.has(key)) {
+              mergedMap.set(key, {
+                id: 'm-' + mergedMap.size + '-' + Date.now().toString(36),
+                name: deptName,
+                sector: targetSector,
+                headcount: 10,
+                explicitScore: null,
+                riposiVal: null,
+                assenzeVal: null,
+                straordVal: null,
+                caricoVal: null,
+                driver: null,
+                pseudoId: hashPseudo(r.Matricola || r.ID_Dip || idx)
+              });
+            }
+
+            const entry = mergedMap.get(key);
+
+            if (r.Addetti !== undefined && r.Addetti !== '') entry.headcount = Number(r.Addetti);
+            else if (r.Dipendenti !== undefined && r.Dipendenti !== '') entry.headcount = Number(r.Dipendenti);
+
+            if (r.Score !== undefined && r.Score !== '') entry.explicitScore = Number(r.Score);
+            if (r.Driver || r.driver) entry.driver = String(r.Driver || r.driver);
+
+            const ripRaw = r.Riposi_11h ?? r.Riposi;
+            if (ripRaw !== undefined && ripRaw !== '') entry.riposiVal = parseNumericValue(ripRaw, 0);
+
+            const assRaw = r.Assenze ?? r.Assenze_Giorni ?? r.Assenze_Brevi;
+            if (assRaw !== undefined && assRaw !== '') entry.assenzeVal = parseNumericValue(assRaw, 0);
+
+            const strRaw = r.Straordinari ?? r.Ore_Straordinari;
+            if (strRaw !== undefined && strRaw !== '') entry.straordVal = parseNumericValue(strRaw, 0);
+
+            const carRaw = r.Carico ?? r.Carico_Operativo;
+            if (carRaw !== undefined && carRaw !== '') entry.caricoVal = parseNumericValue(carRaw, 85);
+          });
+        }
+
+        const mergedDepartments = Array.from(mergedMap.values())
+          .filter(d => d.headcount >= 6)
+          .map((d, i) => {
+            const rip = d.riposiVal ?? 8;
+            const ass = d.assenzeVal ?? 2.0;
+            const str = d.straordVal ?? 5;
+            const car = d.caricoVal ?? 85;
+
+            const computedScore = d.explicitScore !== null
+              ? Math.min(100, Math.max(10, Math.round(d.explicitScore)))
+              : Math.min(98, Math.max(18, Math.round((rip * 0.9) + (str * 1.8) + (ass * 4.5) + (car * 0.22))));
+
+            const driver = d.driver || (
+              rip >= 20 ? 'Turni & Riposi <11h' :
+              str >= 10 ? 'Straordinari Elevati' :
+              ass >= 3.5 ? 'Assenteismo' :
+              car >= 105 ? 'Carico Operativo' : 'Equilibrato'
+            );
+
+            return {
+              id: d.id,
+              name: d.name,
+              sector: d.sector,
+              headcount: d.headcount,
+              score: computedScore,
+              driver,
+              pseudoId: d.pseudoId,
+              metrics: {
+                riposi: `${rip}%`,
+                assenze: `${ass}g`,
+                carico: `${car}%`
+              },
+              actions: [
+                { id: 'ma-' + i + '-1', label: 'Ribilancia turni e riposi <11h', delta: -11, active: false },
+                { id: 'ma-' + i + '-2', label: 'Ridistribuisci carichi e straordinari', delta: -8, active: false }
+              ]
+            };
+          });
+
+        if (!mergedDepartments.length) {
+          toast('Nessun reparto ≥6 addetti trovato nei file', 'warning');
+          return;
+        }
+
+        DATA[targetSector].departments = mergedDepartments;
+        renderAll();
+        showUploadSuccessFeedback(fileNames, mergedDepartments.length);
+        toast('File caricato! Report aggiornato', 'success');
+      } catch (err) {
+        console.error(err);
+        toast('Errore lettura file multipli', 'warning');
+      }
+    }
+
+    function renderMedico() {
+      const el = document.getElementById('medico-list');
+      el.innerHTML = MEDICO_CASES.map((c, i) => `
+        <div class="py-3 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <span class="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800">${c.code}</span>
+            <div>
+              <div class="text-xs font-bold text-slate-900">${c.dept}</div>
+              <div class="text-[11px] font-semibold text-slate-500">Indice: ${c.score}</div>
+            </div>
+          </div>
+          <button type="button" onclick="toggleMedicoStatus(${i})" class="px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${c.status === 'In carico' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+            ${c.status}
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function toggleMedicoStatus(i) {
+      MEDICO_CASES[i].status = MEDICO_CASES[i].status === 'In carico' ? 'Da contattare' : 'In carico';
+      renderMedico();
+    }
+
+    async function submitCheckin(e) {
+      e.preventDefault();
+      const dept = document.getElementById('checkin-dept').value;
+      const v1 = Number(document.querySelector('input[name="c1"]:checked')?.value || 3);
+      const v2 = Number(document.querySelector('input[name="c2"]:checked')?.value || 4);
+      const v3 = Number(document.querySelector('input[name="c3"]:checked')?.value || 2);
+      const v4 = Number(document.querySelector('input[name="c4"]:checked')?.value || 3);
+      const v5 = Number(document.querySelector('input[name="c5"]:checked')?.value || 4);
+      const v6 = Number(document.querySelector('input[name="c6"]:checked')?.value || 3);
+      const consent = document.getElementById('checkin-med').checked;
+
+      const stressScores = [v1, 6 - v2, v3, 6 - v4, 6 - v5, 6 - v6];
+      const avg = (stressScores.reduce((sum, val) => sum + val, 0) / stressScores.length).toFixed(1);
+
+      if (apiOnline) {
+        try {
+          await fetch(`${API_BASE_URL}/api/v1/checkin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              department_id: dept,
+              stress_level: Math.min(5, Math.max(1, Math.round(Number(avg)))),
+              workload_level: v3,
+              recovery_ok: v2 >= 3,
+              sleep_quality: v4,
+              colleagues_relation: v5,
+              manager_relation: v6,
+              consent_medical_contact: consent
+            })
+          });
+        } catch {}
+      }
+
+      if (Number(avg) >= 3.0) {
+        MEDICO_CASES.unshift({
+          code: `#M-${Math.floor(200 + Math.random() * 700)}`,
+          dept,
+          score: `${avg} / 5`,
+          status: 'Da contattare'
+        });
+        renderMedico();
+      }
+      toast(`Inviato (${avg}/5)`, 'success');
+    }
+
+    function renderChart() {
+      const ctx = document.getElementById('stressChart');
+      if (!ctx) return;
+      if (chartObj) chartObj.destroy();
+
+      const pool = currentSector === 'all' ? getAllDepartments() : (DATA[currentSector]?.departments || []);
+      const depts = pool.filter(d => d.headcount >= 6);
+      chartObj = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: depts.map(d => d.name),
+          datasets: [{
+            data: depts.map(d => d.score),
+            backgroundColor: depts.map(d => d.score >= 75 ? '#EF4444' : d.score >= 50 ? '#F59E0B' : '#10B981'),
+            borderRadius: 8,
+            maxBarThickness: 42
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, max: 100, grid: { color: '#F1F5F9' } },
+            x: { grid: { display: false }, ticks: { font: { size: 11, weight: '700' } } }
+          }
+        }
+      });
+    }
+
+    function toast(msg, type = 'info') {
+      const box = document.getElementById('toast-container');
+      const div = document.createElement('div');
+      const color = type === 'success' ? 'border-emerald-500/40' : type === 'warning' ? 'border-amber-500/40' : 'border-blue-500/40';
+      div.className = `pointer-events-auto bg-slate-900 text-white border ${color} px-3.5 py-2.5 rounded-xl shadow-lg text-xs font-bold pop-in`;
+      div.textContent = msg;
+      box.appendChild(div);
+      setTimeout(() => div.remove(), 2600);
+    }
+  </script>
+</body>
+</html>
