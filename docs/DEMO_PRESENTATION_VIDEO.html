@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Demo Interattivo - PoC Rischio Burnout (90 Secondi)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .pulse-ring { animation: pulse-ring 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col justify-between min-h-screen">
+
+  <!-- Top Player Bar -->
+  <header className="border-b border-slate-800 bg-slate-900/90 px-6 py-4 flex items-center justify-between backdrop-blur">
+    <div class="flex items-center gap-3">
+      <span class="bg-rose-600 text-white text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider animate-pulse flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-white"></span> DEMO VIDEO 90s
+      </span>
+      <div>
+        <h1 class="text-base font-bold text-white tracking-tight">Pitch Demo: Rischio Burnout in Sanità Privata</h1>
+        <p class="text-xs text-slate-400">Architettura Privacy by Design, Indicatori INAIL & BAT-12</p>
+      </div>
+    </div>
+
+    <!-- Playback Controls -->
+    <div class="flex items-center gap-3">
+      <button id="btnPlay" class="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md shadow-sky-900/30 flex items-center gap-1.5">
+        <span id="playIcon">▶</span> <span id="playText">Riproduci Video</span>
+      </button>
+      <button id="btnRestart" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-xl border border-slate-700 transition-colors">
+        ↺ Riavvia
+      </button>
+      <button id="btnFullscreen" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-2 rounded-xl border border-slate-700">
+        ⛶ Schermo Intero
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Stage (Simulated Screen View) -->
+  <main class="flex-1 max-w-6xl w-full mx-auto p-6 flex flex-col justify-center">
+    
+    <!-- Video Monitor Frame -->
+    <div class="bg-slate-900 rounded-2xl border-2 border-slate-800 shadow-2xl overflow-hidden flex flex-col min-h-[480px]">
+      
+      <!-- Window Title Bar -->
+      <div class="bg-slate-850 bg-slate-800/80 px-4 py-2.5 border-b border-slate-700/80 flex items-center justify-between text-xs text-slate-400">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+          <span class="ml-2 font-mono text-[11px] text-slate-300" id="windowTitle">https://app.burnout-sanita.it/import</span>
+        </div>
+        <div class="text-[11px] font-semibold text-sky-400 flex items-center gap-1">
+          <span id="sceneBadge">SCENA 1 / 5</span>
+        </div>
+      </div>
+
+      <!-- Scene Dynamic Content Container -->
+      <div id="sceneContainer" class="p-8 flex-1 flex flex-col justify-center transition-opacity duration-300">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Subtitles / Speaker Voiceover Bar -->
+      <div class="bg-slate-950/90 border-t border-slate-800 px-6 py-4 flex items-start gap-4">
+        <div class="bg-sky-500/10 text-sky-400 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider flex-shrink-0 mt-0.5">
+          Voce Speaker
+        </div>
+        <p id="subtitles" class="text-sm text-slate-200 font-medium leading-relaxed italic">
+          "Carico l'Excel della clinica: 150 persone. I nomi spariscono immediatamente e al loro posto restano solo codici pseudonimi."
+        </p>
+      </div>
+    </div>
+
+    <!-- Timeline Scrubber -->
+    <div class="mt-4 space-y-2">
+      <div class="flex justify-between items-center text-xs text-slate-400 font-mono">
+        <span id="timeElapsed">00:00</span>
+        <div class="flex gap-2">
+          <button onclick="jumpTo(0)" class="hover:text-white">1. Ingestione</button> •
+          <button onclick="jumpTo(1)" class="hover:text-white">2. Vista HR</button> •
+          <button onclick="jumpTo(2)" class="hover:text-white">3. Vista Medico</button> •
+          <button onclick="jumpTo(3)" class="hover:text-white">4. Vista Lavoratore</button> •
+          <button onclick="jumpTo(4)" class="hover:text-white">5. Ritorno HR</button>
+        </div>
+        <span>01:30</span>
+      </div>
+      <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden cursor-pointer" id="progressTrack">
+        <div id="progressBar" class="bg-gradient-to-r from-sky-500 to-indigo-500 h-full w-0 transition-all duration-300"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Helper Bar -->
+  <footer class="border-t border-slate-900 bg-slate-950 px-6 py-3 text-center text-xs text-slate-500">
+    <span>💡 Per la presentazione: puoi registrare lo schermo mentre questo video gira (tasto <kbd class="bg-slate-800 px-1.5 py-0.5 rounded text-slate-300">Win + Alt + R</kbd> su Windows) per esportare un video MP4 pronto!</span>
+  </footer>
+
+  <script>
+    const SCENES = [
+      {
+        id: 1,
+        title: "https://app.burnout-sanita.it/ingest",
+        duration: 18,
+        speaker: "\"Carico l'Excel della clinica: 150 persone. I nomi spariscono all'istante e al loro posto restano solo codici pseudonimi irreversibili. Così nomi, codici fiscali e diagnosi non entrano mai nell'app, nemmeno per errore.\"",
+        render: () => `
+          <div class="max-w-3xl mx-auto space-y-6 text-center">
+            <div class="inline-block bg-sky-500/10 text-sky-400 text-xs font-bold px-3 py-1 rounded-full uppercase mb-2">
+              Step 1 • Ingestione & Privacy by Design
+            </div>
+            <h2 class="text-3xl font-extrabold text-white">Caricamento Excel & Pseudonimizzazione HMAC</h2>
+            
+            <div class="grid grid-cols-2 gap-4 text-left mt-6">
+              <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700">
+                <div class="text-xs text-rose-400 font-bold uppercase mb-2">Dati in Ingresso (File Excel del cliente)</div>
+                <div class="font-mono text-xs text-slate-300 space-y-1">
+                  <div>Matricola: <span class="text-rose-300 font-bold">MATR_1042</span></div>
+                  <div>Reparto: Medicina</div>
+                  <div>Ruolo: Infermiere</div>
+                </div>
+              </div>
+              <div class="bg-slate-800/80 p-4 rounded-xl border border-emerald-500/50 relative">
+                <div class="text-xs text-emerald-400 font-bold uppercase mb-2">Salvataggio nel Database (Sicuro)</div>
+                <div class="font-mono text-xs text-slate-300 space-y-1">
+                  <div>Codice: <span class="text-emerald-400 font-bold">a54934a6fd</span></div>
+                  <div>Reparto: Medicina</div>
+                  <div>Ruolo: Infermiere</div>
+                </div>
+                <span class="absolute top-3 right-3 text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">HMAC-SHA256</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-800/40 p-3 rounded-xl border border-slate-700/60 text-xs text-slate-400 flex items-center justify-around">
+              <span>✓ 7 Fogli Excel validati</span>
+              <span>✓ 150 operatori pseudonimizzati</span>
+              <span>✓ Whitelist: scartati CF e note cliniche</span>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 2,
+        title: "https://app.burnout-sanita.it/hr-dashboard",
+        duration: 25,
+        speaker: "\"Passiamo alla Vista HR. In alto vediamo 4 numeri: costo turnover a 135.000 € e il reparto Medicina in allarme rosso. La mappa di calore spiega il perché con i 3 fattori oggettivi: straordinari sistematici, turni da 12 ore e ferie non godute.\"",
+        render: () => `
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase">Step 2 • Vista HR (Direzione)</span>
+                <h2 class="text-2xl font-bold text-white">Cruscotto Direzionale & Mappa di Calore</h2>
+              </div>
+              <span class="text-xs text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">K-Anonymity (K = 6) Garantito</span>
+            </div>
+
+            <!-- KPI Row -->
+            <div class="grid grid-cols-4 gap-3">
+              <div class="bg-slate-800 p-3.5 rounded-xl border border-slate-700">
+                <div class="text-[10px] text-slate-400 uppercase font-bold">Rischio Struttura</div>
+                <div class="text-2xl font-extrabold text-white mt-0.5">25.5 <span class="text-xs text-emerald-400 font-semibold">Basso</span></div>
+              </div>
+              <div class="bg-slate-800 p-3.5 rounded-xl border border-rose-500/50 bg-rose-500/5">
+                <div class="text-[10px] text-rose-400 uppercase font-bold">Reparti in Allarme</div>
+                <div class="text-2xl font-extrabold text-rose-400 mt-0.5">1 <span class="text-xs text-slate-300 font-normal">(Medicina)</span></div>
+              </div>
+              <div class="bg-slate-800 p-3.5 rounded-xl border border-slate-700">
+                <div class="text-[10px] text-slate-400 uppercase font-bold">Costo Turnover (12m)</div>
+                <div class="text-2xl font-extrabold text-amber-400 mt-0.5">135.000 €</div>
+              </div>
+              <div class="bg-slate-800 p-3.5 rounded-xl border border-slate-700">
+                <div class="text-[10px] text-slate-400 uppercase font-bold">In Carico al Medico</div>
+                <div class="text-2xl font-extrabold text-sky-400 mt-0.5">0 <span class="text-xs text-slate-400 font-normal">operatori</span></div>
+              </div>
+            </div>
+
+            <!-- Focus Medicina & 3 Fattori -->
+            <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 text-xs">
+              <div class="flex justify-between items-center mb-2">
+                <strong class="text-rose-400 text-sm">Criticità Reparto Medicina (Punteggio: 55.6 / 100)</strong>
+                <span class="text-slate-400">Organico: 30 persone</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                  <div class="text-slate-400 font-bold">1. Straordinari (30.1h/m)</div>
+                  <div class="text-slate-300 mt-1 text-[11px]">Azione: Pianificare coperture turni stabili</div>
+                </div>
+                <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                  <div class="text-slate-400 font-bold">2. Turni lunghi (5.2/m)</div>
+                  <div class="text-slate-300 mt-1 text-[11px]">Azione: Limitare turni consecutivi da 12 ore</div>
+                </div>
+                <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                  <div class="text-slate-400 font-bold">3. Ferie residue (24.7 gg)</div>
+                  <div class="text-slate-300 mt-1 text-[11px]">Azione: Piani di smaltimento ferie concordati</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 3,
+        title: "https://app.burnout-sanita.it/medico",
+        duration: 25,
+        speaker: "\"Nella Vista del Medico Competente, compaiono gli operatori ordinati per gravità con la bandiera rossa 'DA CONTATTARE'. Apro la scheda dell'operatore a54934a6fd, verifico il check-in autorizzato dal lavoratore e clicco 'Contattato' per la presa in carico.\"",
+        render: () => `
+          <div class="space-y-4">
+            <div class="flex justify-between items-center">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase">Step 3 • Vista Medico Competente</span>
+                <h2 class="text-2xl font-bold text-white">Triage Operatori & Scheda Riservata</h2>
+              </div>
+              <span class="text-xs text-rose-400 bg-rose-500/10 px-2.5 py-1 rounded-full border border-rose-500/20 animate-pulse font-bold">
+                🚩 19 Casi "DA CONTATTARE"
+              </span>
+            </div>
+
+            <!-- Simulated Doctor Triage Table & Open Dossier -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 text-xs space-y-2">
+                <div class="font-bold text-slate-300 uppercase text-[11px]">Elenco Triage Prioritario</div>
+                <div class="p-2.5 bg-rose-500/10 border border-rose-500/40 rounded-lg flex justify-between items-center">
+                  <div>
+                    <span class="font-mono font-bold text-white">a54934a6fd</span> (Medicina)
+                    <div class="text-[10px] text-rose-300">Check-in = 4 | BAT-12 = 3.67</div>
+                  </div>
+                  <span class="bg-rose-600 text-white px-2 py-0.5 rounded text-[10px] font-bold">SELEZIONATO</span>
+                </div>
+                <div class="p-2.5 bg-slate-900 rounded-lg border border-slate-800 flex justify-between text-slate-400">
+                  <span class="font-mono">8f21b7c09e</span> (Medicina)
+                  <span>Score: 48.2</span>
+                </div>
+              </div>
+
+              <!-- Dossier Card with Action -->
+              <div class="bg-slate-800 p-4 rounded-xl border border-sky-500/50 text-xs space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="font-bold text-sky-400 font-mono">Dossier: a54934a6fd</span>
+                  <span class="text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-bold">Consenso Attivo ✓</span>
+                </div>
+                <p class="text-slate-300 text-[11px] leading-relaxed">
+                  L'operatore ha espresso sintomi elevati e richiesto un colloquio. Presa in carico in corso:
+                </p>
+                <div class="bg-slate-900 p-3 rounded-lg border border-slate-700 text-slate-300 flex items-center justify-between">
+                  <span>Stato: <strong class="text-white">Contattato</strong></span>
+                  <button class="bg-sky-600 hover:bg-sky-500 text-white px-3 py-1 rounded text-[11px] font-bold shadow">
+                    ✓ Registrato
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 4,
+        title: "https://app.burnout-sanita.it/lavoratore",
+        duration: 15,
+        speaker: "\"Nella Vista Lavoratore, l'operatore accede con il suo codice in 10 secondi. Se indica un'intensità elevata, si apre il questionario BAT-12. Il lavoratore ha la sovranità assoluta sul consenso: può revocarlo in qualunque istante.\"",
+        render: () => `
+          <div class="max-w-2xl mx-auto space-y-4">
+            <div class="flex justify-between items-center">
+              <div>
+                <span class="text-xs font-bold text-sky-400 uppercase">Step 4 • Vista Lavoratore (Dipendente)</span>
+                <h2 class="text-2xl font-bold text-white">Check-in 10 Secondi & Sovranità Privacy</h2>
+              </div>
+              <span class="text-xs text-sky-300 bg-sky-500/10 px-2.5 py-1 rounded-full border border-sky-500/20">100% Riservato</span>
+            </div>
+
+            <div class="bg-slate-800 p-5 rounded-2xl border border-slate-700 space-y-4 text-xs">
+              <div>
+                <label class="block text-slate-200 font-bold mb-2">
+                  Quanto ti senti emotivamente sopraffatto/a o svuotato/a dal lavoro?
+                </label>
+                <div class="grid grid-cols-5 gap-2 text-center">
+                  <div class="p-2 bg-slate-900 rounded-lg text-slate-400">1<br>Mai</div>
+                  <div class="p-2 bg-slate-900 rounded-lg text-slate-400">2<br>Raro</div>
+                  <div class="p-2 bg-slate-900 rounded-lg text-slate-400">3<br>Medio</div>
+                  <div class="p-2 bg-rose-600 text-white rounded-lg font-bold border-2 border-white">4<br>Spesso</div>
+                  <div class="p-2 bg-slate-900 rounded-lg text-slate-400">5<br>Sempre</div>
+                </div>
+              </div>
+
+              <!-- Unlocked BAT-12 Indicator -->
+              <div class="bg-sky-500/10 border border-sky-500/30 p-3 rounded-xl text-sky-300 flex items-center justify-between">
+                <span>✓ Sbloccato approfondimento validato BAT-12 (Burnout Assessment Tool)</span>
+                <span class="font-bold">Media: 3.67 / 5</span>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-700 text-slate-300">
+                <span>Condivisione riservata con il Medico Competente</span>
+                <span class="bg-emerald-500/20 text-emerald-300 px-2.5 py-1 rounded text-[11px] font-bold">Attiva (Revocabile)</span>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      {
+        id: 5,
+        title: "https://app.burnout-sanita.it/hr-dashboard",
+        duration: 12,
+        speaker: "\"Ritorniamo alla Vista HR: il contatore 'Persone in Carico' è salito a 1. La direzione sa che l'intervento preventivo è partito, ma l'identità e la privacy del lavoratore rimangono blindate e inviolabili. Questo è il PoC di Libellula.\"",
+        render: () => `
+          <div class="max-w-2xl mx-auto space-y-6 text-center">
+            <span class="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full uppercase border border-emerald-500/30">
+              Step 5 • Ritorno all'HR & Chiusura del Ciclo
+            </span>
+            <h2 class="text-3xl font-extrabold text-white">Prevenzione Attiva con Tutela Totale</h2>
+
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 flex items-center justify-around">
+              <div>
+                <div class="text-xs text-slate-400 uppercase font-bold">Prima</div>
+                <div class="text-3xl font-bold text-slate-500 mt-1">0 in carico</div>
+              </div>
+              <div class="text-2xl text-emerald-400 font-bold">➔</div>
+              <div>
+                <div class="text-xs text-emerald-400 uppercase font-bold">Dopo la presa in carico</div>
+                <div class="text-4xl font-extrabold text-emerald-400 mt-1">1 in carico</div>
+              </div>
+            </div>
+
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed text-left">
+              <strong>Esito Dimostrativo:</strong> La direzione aziendale ha la certezza oggettiva che il supporto sanitario è stato attivato, mentre il lavoratore ha la garanzia assoluta che la sua identità e i suoi check-in individuali restano rigorosamente confidenziali.
+            </div>
+          </div>
+        `
+      }
+    ];
+
+    let currentSceneIdx = 0;
+    let timer = null;
+    let secondsElapsed = 0;
+    let isPlaying = false;
+
+    const totalSeconds = SCENES.reduce((acc, s) => acc + s.duration, 0);
+
+    function updateView() {
+      const scene = SCENES[currentSceneIdx];
+      document.getElementById('windowTitle').textContent = scene.title;
+      document.getElementById('sceneBadge').textContent = `SCENA ${currentSceneIdx + 1} / ${SCENES.length}`;
+      document.getElementById('sceneContainer').innerHTML = scene.render();
+      document.getElementById('subtitles').textContent = scene.speaker;
+
+      // Update progress
+      const progressPercent = (secondsElapsed / totalSeconds) * 100;
+      document.getElementById('progressBar').style.width = `${progressPercent}%`;
+
+      const m = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+      const s = (secondsElapsed % 60).toString().padStart(2, '0');
+      document.getElementById('timeElapsed').textContent = `${m}:${s}`;
+    }
+
+    function tick() {
+      secondsElapsed++;
+      // Determine scene from elapsed
+      let accumulated = 0;
+      for (let i = 0; i < SCENES.length; i++) {
+        accumulated += SCENES[i].duration;
+        if (secondsElapsed <= accumulated) {
+          if (currentSceneIdx !== i) {
+            currentSceneIdx = i;
+          }
+          break;
+        }
+      }
+
+      if (secondsElapsed >= totalSeconds) {
+        pause();
+        secondsElapsed = totalSeconds;
+      }
+      updateView();
+    }
+
+    function play() {
+      if (isPlaying) return;
+      if (secondsElapsed >= totalSeconds) secondsElapsed = 0;
+      isPlaying = true;
+      document.getElementById('playIcon').textContent = '⏸';
+      document.getElementById('playText').textContent = 'Pausa';
+      timer = setInterval(tick, 1000);
+    }
+
+    function pause() {
+      isPlaying = false;
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playText').textContent = 'Riproduci Video';
+      clearInterval(timer);
+    }
+
+    function jumpTo(sceneIdx) {
+      currentSceneIdx = sceneIdx;
+      let acc = 0;
+      for (let i = 0; i < sceneIdx; i++) acc += SCENES[i].duration;
+      secondsElapsed = acc;
+      updateView();
+    }
+
+    document.getElementById('btnPlay').onclick = () => {
+      if (isPlaying) pause(); else play();
+    };
+
+    document.getElementById('btnRestart').onclick = () => {
+      pause();
+      secondsElapsed = 0;
+      currentSceneIdx = 0;
+      updateView();
+      play();
+    };
+
+    document.getElementById('btnFullscreen').onclick = () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    };
+
+    // Click on progress track
+    document.getElementById('progressTrack').onclick = (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickRatio = (e.clientX - rect.left) / rect.width;
+      secondsElapsed = Math.floor(clickRatio * totalSeconds);
+      tick();
+    };
+
+    // Initial render
+    updateView();
+  </script>
+</body>
+</html>
