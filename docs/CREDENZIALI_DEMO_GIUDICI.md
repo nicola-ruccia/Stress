@@ -19,14 +19,14 @@ Gli account vanno creati una volta nel database effettivamente usato dalla demo.
    python scripts/seed_judge_accounts.py --create-demo
    ```
 
-   Per Vercel, installa/autentica la CLI (`npm install --global vercel`, `vercel login`) e collega la cartella al progetto (`vercel link`). Scarica le variabili di produzione in un file separato, poi esegui il seed:
+   Per Vercel, installa/autentica la CLI (`npm install --global vercel`, `vercel login`) e collega la cartella al progetto (`vercel link`). Scarica le variabili di produzione in un file separato. La CLI sostituisce i valori delle variabili di tipo Secret con `[SENSITIVE]`: sostituisci localmente `SECRET_KEY` e `PSEUDO_KEY` con gli stessi valori impostati su Vercel prima di eseguire il seed.
 
    ```powershell
    vercel env pull .env.production.local --environment=production
-   python scripts/seed_judge_accounts.py --create-demo --env-file .env.production.local
+   python scripts/seed_judge_accounts.py --create-demo --env-file .env.production.local --company semalia-demo-giudici-prod
    ```
 
-   Il file deve contenere `DATABASE_URL` con la connessione PostgreSQL di produzione, oltre alle stesse `SECRET_KEY` e `PSEUDO_KEY` configurate su Vercel. Se l'integrazione database espone la connessione con un altro nome, aggiungi `DATABASE_URL` nelle variabili del progetto.
+   Il file deve contenere `DATABASE_URL` con la connessione PostgreSQL di produzione, oltre alle stesse `SECRET_KEY` e `PSEUDO_KEY` configurate su Vercel. Se l'integrazione database espone la connessione con un altro nome, aggiungi `DATABASE_URL` nelle variabili del progetto. Non eseguire il seed se nel file trovi `[SENSITIVE]`.
 
 3. Ridistribuisci il progetto se hai aggiornato variabili o codice su Vercel.
 

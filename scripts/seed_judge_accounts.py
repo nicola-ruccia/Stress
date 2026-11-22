@@ -50,20 +50,20 @@ EMAILS = {
 }
 
 
-def seed(db: Session) -> None:
+def seed(db: Session, company: str = COMPANY) -> None:
     # Set before calling the generator so it never attempts to write demo files
     # into a serverless filesystem.
     os.environ["VERCEL"] = "1"
 
     for role, email in EMAILS.items():
         account = db.query(Account).filter(Account.email == email).first()
-        if account and account.company != COMPANY:
+        if account and account.company != company:
             raise RuntimeError(f"L'indirizzo {email} è già assegnato a un'altra azienda.")
         if account and account.role != role:
             raise RuntimeError(f"L'indirizzo {email} esiste con un ruolo diverso.")
 
     # Create the company and its tenant schema before inserting demo data.
-    bind_company_database(db, COMPANY)
+    bind_company_database(db, company)
     first_matricola = str(build_dataset_dataframes()["dipendenti"].iloc[0]["matricola"])
     worker_code = pseudonimize_matricola(first_matricola)
     if not db.query(Dipendente).filter(Dipendente.codice == worker_code).first():
@@ -77,10 +77,10 @@ def seed(db: Session) -> None:
     for role, email in EMAILS.items():
         account = db.query(Account).filter(Account.email == email).first()
         if account is None:
-            account = Account(email=email, role=role, company=COMPANY)
+            account = Account(email=email, role=role, company=company)
             db.add(account)
         account.role = role
-        account.company = COMPANY
+        account.company = company
         account.employee_code = worker_code if role == "lavoratore" else None
         account.password_hash = _password_hash(PASSWORDS[role])
         account.setup_token_hash = None
@@ -96,11 +96,14 @@ def main() -> int:
         help="conferma la creazione/aggiornamento degli account demo e del dataset sintetico",
     )
     parser.add_argument("--env-file", help="file .env opzionale per selezionare il database target")
+    parser.add_argument("--company", default=COMPANY, help="nome dell'azienda demo nel database selezionato")
     args = parser.parse_args()
     if not args.create_demo:
         parser.error("aggiungi --create-demo per confermare l'operazione sul database configurato")
-    if (settings.SECRET_KEY == "dev_secret_key_change_in_production"
-            or settings.PSEUDO_KEY == "chiave_segreta_hmac_sanita_privata_demo"):
+    invalid_secret_values = {"", "[SENSITIVE]", "dev_secret_key_change_in_production"}
+    invalid_pseudo_values = {"", "[SENSITIVE]", "chiave_segreta_hmac_sanita_privata_demo"}
+    if (settings.SECRET_KEY in invalid_secret_values
+            or settings.PSEUDO_KEY in invalid_pseudo_values):
         print("Errore: configura SECRET_KEY e PSEUDO_KEY prima di procedere.", file=sys.stderr)
         return 2
     if args.env_file and not settings.DATABASE_URL.startswith(("postgres://", "postgresql://", "postgresql+psycopg://")):
@@ -109,7 +112,7 @@ def main() -> int:
 
     init_db()
     with SessionLocal() as db:
-        seed(db)
+        seed(db, company=args.company.strip().casefold())
     print("Account giudici creati/aggiornati. Tutti usano dati esclusivamente sintetici.")
     return 0
 
