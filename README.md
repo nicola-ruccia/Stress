@@ -96,8 +96,18 @@ burnout-backend/
    uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-4. **Apri la documentazione Swagger interattiva**:
-   Visita nel browser: [http://localhost:8000/docs](http://localhost:8000/docs)
+4. **Accedi all'Applicazione**:
+   - 🖥️ **Interfaccia Web Completa (Frontend)**: [http://localhost:8000/](http://localhost:8000/) (servita direttamente da FastAPI con bundle React)
+   - 📑 **Swagger UI / Documentazione API**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+5. **(Opzionale) Sviluppo Frontend con Vite**:
+   Se vuoi modificare o eseguire il frontend in modalità hot-reload indipendente:
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   L'interfaccia Vite sarà attiva su [http://localhost:3000](http://localhost:3000) e proxyerà automaticamente le chiamate verso la porta 8000.
 
 ---
 
