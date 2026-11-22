@@ -1,5 +1,7 @@
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from app.core.config import settings
 from app.api.v1.api import api_router
 from app.db.session import init_db
@@ -42,5 +44,22 @@ def health_check():
     }
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+@app.get("/", include_in_schema=False)
+def serve_root():
+    colleague_html = BASE_DIR / "stressa_piattaforma_aziendale_stress_burnout.html"
+    if colleague_html.exists():
+        return FileResponse(str(colleague_html))
+    return {"message": "Stressa Burnout Backend Running. See /docs for API."}
+
+@app.get("/video-demo", include_in_schema=False)
+def serve_video_demo():
+    video_html = BASE_DIR / "docs" / "DEMO_PRESENTATION_VIDEO.html"
+    if video_html.exists():
+        return FileResponse(str(video_html))
+    return {"message": "Video demo not found"}
+
 
 
