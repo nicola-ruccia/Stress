@@ -1,0 +1,11 @@
+#,Indicatore,Fonte,Tipo di dato (GDPR),Si può? A quale condizione
+1,"Assenze per malattia: episodi brevi, giorni, andamento",Paghe,Dato sanitario (art. 9),"Sì: solo date e durata, mai la diagnosi (l'azienda comunque non ce l'ha)"
+2,Straordinari e ferie non godute,Paghe,Comune,Sì
+3,Dimissioni e turnover,HR,Comune,"Sì, senza i motivi scritti a testo libero"
+4,Richieste di trasferimento,HR,Comune,"Sì, solo il numero"
+5,Infortuni,HR / INAIL,Dato sanitario,"Sì, solo numero e giorni per reparto"
+6,Procedimenti disciplinari,HR,Comune ma delicato,"Sì, solo il numero per reparto"
+7,"Rientri rapidi (meno di 11 ore), turni di 12 ore o più, notti consecutive",Turni,Comune,"Sì: si calcolano sul singolo con codice al posto del nome (pseudonimizzato), ma il risultato si mostra solo per reparto"
+8,Pazienti per infermiere,Turni + posti letto,"Non personale, solo conteggi","Sì, nessun dato dei pazienti"
+9,Aggressioni agli operatori,Segnalazioni,Può contenere dati sanitari e dati di altre persone,"Sì, solo il numero per reparto"
+10,Check-in sul burnout (domanda singola + BAT-12),Dipendente,Dato sanitario: salute mentale,"Sì, solo se è volontario e se il risultato individuale va solo al lavoratore (e, se lui lo vuole, allo psicologo o al medico competente). Il consenso dato al proprio datore di lavoro non è considerato libero, quindi l'HR non deve mai vedere il singolo"

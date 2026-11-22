@@ -1,0 +1,82 @@
+# Configurazione soglie di rischio, privacy e parametri PoC/MVP
+k_min: 6
+retention_mesi: 24
+avvisi_orario_hr: false
+costo_turnover_default: 45000.0
+
+fasce:
+  basso: 34
+  alto: 66
+
+# Soglie per indicatore:
+# 0 punti (verde) se sotto giallo
+# 1 punto (giallo) se tra giallo e rosso
+# 2 punti (rosso) se sopra o uguale a rosso
+indicatori:
+  rientri_rapidi:
+    giallo: 2
+    rosso: 5
+    unita: "pause < 11h/mese"
+  turni_lunghi:
+    giallo: 2
+    rosso: 4
+    unita: "turni >= 12h/mese"
+  pazienti_infermiere:
+    giallo: 6.0
+    rosso: 8.0
+    unita: "pazienti / infermiere"
+  straordinari:
+    giallo: 15.0
+    rosso: 30.0
+    unita: "ore/mese"
+  ferie_residue:
+    giallo: 15.0
+    rosso: 25.0
+    unita: "giorni residui"
+  malattia_brevi:
+    giallo: 1.0
+    rosso: 3.0
+    unita: "delta episodi 1-3 gg vs trimestre prec."
+  infortuni:
+    giallo: 1.0
+    rosso: 3.0
+    unita: "eventi ultimi 12 mesi"
+  aggressioni:
+    giallo: 1.0
+    rosso: 3.0
+    unita: "segnalazioni/mese"
+  dimissioni:
+    giallo: 1.0
+    rosso: 3.0
+    unita: "dimissioni ultimi 12 mesi"
+  trasferimenti:
+    giallo: 1.0
+    rosso: 3.0
+    unita: "richieste ultimi 12 mesi"
+  disciplinari:
+    giallo: 1.0
+    rosso: 2.0
+    unita: "procedimenti ultimi 12 mesi"
+  checkin:
+    giallo: 3.0
+    rosso: 4.0
+    unita: "scala 1-5"
+  bat12:
+    giallo: 2.5
+    rosso: 3.5
+    unita: "punteggio medio BAT-12 (1-5)"
+
+azioni_suggerite:
+  rientri_rapidi: "Rivedere la rotazione dei turni e garantire rigorosamente almeno 11 ore di riposo continuativo tra i turni lavorati."
+  turni_lunghi: "Limitare l'impiego sistematico su turni da 12 ore e monitorare la stanchezza acuta e il recupero degli operatori."
+  pazienti_infermiere: "Ricalibrare il rapporto organico/pazienti integrando personale di supporto o ridistribuendo i carichi assistenziali."
+  straordinari: "Pianificare coperture organiche stabili per abbattere il ricorso prolungato e sistematico a ore supplementari."
+  ferie_residue: "Definire piani concordati di smaltimento ferie non godute per favorire il necessario recupero psicofisico."
+  malattia_brevi: "Indagare le cause di micro-assenze ricorrenti (1-3 giorni) come possibile spia precoce di disagio e stress da lavoro-correlato."
+  infortuni: "Verificare e potenziare i protocolli di prevenzione e sicurezza del reparto, analizzando la correlazione con affaticamento e carichi."
+  aggressioni: "Attivare protocolli di de-escalation, rafforzare i presidi di vigilanza e garantire immediato supporto psicologico post-evento agli operatori."
+  dimissioni: "Condurre colloqui di exit interview approfonditi e valutare il clima organizzativo e le condizioni operative del reparto."
+  trasferimenti: "Analizzare i fattori di attrito o sovraccarico specifici del reparto che motivano le richieste di trasferimento."
+  disciplinari: "Approfondire tempestivamente eventuali situazioni di conflittualità organizzativa latente o di tensione tra colleghi/coordinatori."
+  checkin: "Attivare canali dedicati di ascolto psicologico o sportelli di supporto aziendale per il benessere del personale."
+  bat12: "Disporre l'invito a visita con il medico competente o psicologo del lavoro per colloquio clinico approfondito e piano di tutela."

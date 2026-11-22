@@ -1,0 +1,273 @@
+﻿Architettura software – PoC rischio burnout in sanità privata
+Nov 21, 2026 · @Libellula
+Obiettivo e principi
+Entro domenica costruiamo una sola app Python (Streamlit). L'app legge un Excel con dati di paghe, HR e turni, calcola indicatori spiegabili di rischio burnout e li mostra in tre viste separate per ruolo: HR, medico competente e lavoratore.
+Il sistema non fa diagnosi: segnala reparti e persone a rischio elevato e mostra perché.
+Principi di progetto
+Semplice: un solo processo Python e un database SQLite. Niente microservizi e niente machine learning.
+Privacy by design:
+la matricola diventa un codice già al momento dell'import;
+un dato aggregato si mostra solo se riguarda almeno 6 persone;
+ogni ruolo vede solo ciò che può vedere per legge.
+Spiegabile: ogni punteggio mostra i 3 fattori che pesano di più. Le soglie stanno in un file di configurazione, non nel codice.
+Estendibile: aggiungere un indicatore richiede una funzione e una riga nel registro, e nient'altro.
+Solo dati sintetici nella demo, mai dati reali.
+Architettura
+Un solo processo Python: Streamlit per le pagine, pandas per i calcoli, SQLite come database. Niente API separate e niente microservizi: nel PoC tutto parte con streamlit run app.py.
+architettura del PoC · 6 moduli, 3 viste
+I dati entrano una sola volta, dall'Excel, e vengono pseudonimizzati subito. Le viste non leggono mai il database direttamente: ci scrivono solo i check-in e le prese in carico.
+Dati in ingresso
+Arriva un solo file Excel con 7 fogli, che contiene solo i campi elencati qui sotto. All'import ogni altra colonna viene scartata: così nomi, codici fiscali e diagnosi non entrano mai nell'app, nemmeno per errore.
+Foglio
+Ogni riga contiene
+Campi
+dipendenti
+una persona
+matricola, reparto, ruolo (infermiere / OSS / medico / altro), data_assunzione, data_cessazione, tipo_cessazione (dimissioni / altro)
+turni
+un turno lavorato
+matricola, reparto, inizio (data e ora), fine (data e ora)
+assenze
+un periodo di assenza
+matricola, tipo (malattia / infortunio / ferie / altro), data_inizio, data_fine
+ore_mese
+una persona in un mese
+matricola, mese, ore_straordinario, ferie_residue_giorni
+eventi_hr
+un evento
+matricola, data, tipo (richiesta_trasferimento / procedimento_disciplinare)
+aggressioni
+una segnalazione
+reparto, data (senza persone e senza dati del paziente)
+occupazione
+un reparto in un giorno
+reparto, data, pazienti_presenti
+Il check-in non arriva dall'Excel: lo compila il lavoratore nella sua vista. Viene salvato nella tabella checkin con questi campi:
+codice;
+data;
+domanda_singola (da 1 a 5);
+risposte al BAT-12 (facoltative);
+consenso_medico (sì o no).
+Pseudonimizzazione all'import
+Il codice si calcola così: codice = HMAC-SHA256(matricola, PSEUDO_KEY), troncato a 10 caratteri. La chiave sta in una variabile d'ambiente. In produzione la custodisce il cliente.
+L'app non salva mai la matricola. La tabella matricola → codice viene generata all'import come file da scaricare. Resta al cliente, che la affida a chi può ricollegare il codice alla persona, cioè il medico competente.
+Il controllo dei dati mostra un report: righe accettate, righe scartate e motivo, colonne ignorate. Ad esempio vengono scartate le righe in cui un turno finisce prima di iniziare e quelle con un reparto sconosciuto.
+Indicatori e punteggio
+Il PoC calcola 13 indicatori, tutti con lo stesso peso. Pesarli diversamente richiederebbe una validazione che oggi non abbiamo. Ogni indicatore dichiara a quale livello si calcola (persona o reparto), chi può vederlo e su quale fonte si basa.
+ID
+Indicatore
+Calcolo
+Livello
+Chi lo vede
+Fonte
+rientri_rapidi
+Rientri rapidi
+numero di pause sotto le 11 ore tra la fine di un turno e l'inizio del successivo, al mese
+persona → reparto
+HR (avviso sull'orario), medico
+Vedaa e coll., rientri rapidi e malattia
+turni_lunghi
+Turni lunghi
+numero di turni di 12 ore o più, al mese
+persona → reparto
+HR (avviso sull'orario), medico
+Dall'Ora e coll., BMJ Open 2015
+pazienti_infermiere
+Pazienti per infermiere
+media per turno di pazienti presenti diviso infermieri in turno
+reparto
+HR, medico
+Aiken e coll., JAMA 2002
+straordinari
+Straordinari
+ore al mese
+persona → reparto
+HR, medico
+Lista di controllo INAIL (orario di lavoro)
+ferie_residue
+Ferie non godute
+giorni residui
+persona → reparto
+HR, medico
+Evento sentinella INAIL
+malattia_brevi
+Assenze brevi per malattia
+episodi di 1-3 giorni negli ultimi 3 mesi, confrontati con i 3 mesi precedenti
+persona → reparto
+medico; HR solo per reparto
+Evento sentinella INAIL; studi su burnout e assenze
+infortuni
+Infortuni
+numero e giorni persi, ultimi 12 mesi
+reparto
+HR, medico
+Evento sentinella INAIL
+aggressioni
+Aggressioni al personale
+segnalazioni al mese
+reparto
+HR, medico
+Studi su violenza e burnout
+dimissioni
+Dimissioni
+tasso negli ultimi 12 mesi
+reparto
+HR, medico
+Evento sentinella INAIL (rotazione del personale)
+trasferimenti
+Richieste di trasferimento
+numero, ultimi 12 mesi
+reparto
+HR, medico
+Evento sentinella INAIL
+disciplinari
+Procedimenti disciplinari
+numero, ultimi 12 mesi
+reparto
+HR, medico
+Evento sentinella INAIL
+checkin
+Check-in, domanda singola
+ultimo valore da 1 a 5 (3 o più = sintomi di burnout)
+persona
+lavoratore; medico solo con consenso; HR solo come % del reparto, con almeno 6 risposte
+Domanda singola validata (sensibilità 83%, specificità 87%)
+bat12
+BAT-12
+punteggio medio
+persona
+lavoratore; medico solo con consenso
+Burnout Assessment Tool, validazione italiana (verificare la licenza)
+Come si calcola il punteggio
+Semaforo per ogni indicatore. Ogni indicatore prende 0 punti (verde), 1 (giallo) o 2 (rosso), in base a due soglie scritte in config/soglie.yaml. Per gli eventi sentinella vale la logica INAIL: andamento rispetto al periodo precedente (in calo, stabile, in aumento).
+Punteggio da 0 a 100 per il reparto e, solo nella vista del medico, per la persona:
+\text{punteggio} = \frac{\sum \text{punti}}{2 \times n_{\text{indicatori disponibili}}} \times 100
+Fasce: basso sotto 34, medio da 34 a 66, alto sopra 66. Sono valori iniziali, da tarare con il pilota.
+Bandiera "da contattare" (solo nella vista del medico). Si accende se la domanda singola vale 3 o più, oppure se il BAT-12 supera la soglia, qualunque sia il punteggio.
+Spiegazione: accanto a ogni punteggio compaiono i 3 indicatori che hanno preso più punti.
+Le viste
+Sono 4 pagine Streamlit. Nel PoC un selettore del ruolo nella barra laterale sostituisce il login. Il filtro su cosa può vedere ciascun ruolo sta però nel codice, non solo nell'interfaccia.
+Caricamento dati (amministratore HR)
+Caricamento dell'Excel e report di validazione.
+Anteprima dei dati già pseudonimizzati.
+Download della tabella matricola → codice, che l'app non salva.
+Vista HR
+In alto 4 numeri:
+livello di rischio della struttura;
+reparti in rosso;
+costo del turnover degli ultimi 12 mesi, cioè le dimissioni × 45.000 € (parametro modificabile);
+persone prese in carico dal medico (solo il numero).
+Mappa di calore reparti × mesi con il punteggio di reparto.
+Dettaglio del reparto:
+semaforo di ogni indicatore;
+i 3 fattori principali;
+un'azione suggerita per ogni fattore (testo fisso, ad esempio per i rientri rapidi: "rivedere la rotazione dei turni").
+Avvisi sull'orario (opzione spenta di default, da verificare con un avvocato del lavoro): codici con riposo sotto le 11 ore o turni di 12 ore o più, senza nessuna etichetta "burnout".
+Non mostra mai: assenze individuali, check-in, BAT-12.
+Vista medico competente o psicologo
+Elenco dei codici ordinato per punteggio, filtrabile per reparto, con la bandiera "da contattare".
+Scheda della persona:
+andamento mensile degli indicatori;
+i 3 fattori principali;
+i check-in, solo se c'è il consenso.
+Pulsante "contattato": registra la presa in carico, ed è ciò che alimenta il numero mostrato all'HR.
+Vista lavoratore
+Nel PoC la persona inserisce il proprio codice.
+Check-in mensile con la domanda singola. Se la risposta vale 3 o più, si apre il BAT-12.
+Mostra il proprio risultato con una spiegazione semplice.
+Interruttore "condividi con il medico competente" (consenso revocabile) e pulsante "chiedo un colloquio".
+Regole privacy nel codice
+Tutte le regole privacy stanno in un solo modulo, core/privacy.py, e ogni vista passa da lì. Nessuna pagina legge il database direttamente.
+Elenco dei campi ammessi all'import: ogni colonna che non è prevista dal modello viene scartata.
+Pseudonimizzazione con HMAC e chiave segreta: il codice si calcola come descritto in "Dati in ingresso" e la matricola non viene mai salvata.
+Soglia minima K_MIN = 6: un dato aggregato su meno di 6 persone mostra "dati insufficienti", anche nella mappa di calore. I reparti troppo piccoli si uniscono in "Altri reparti".
+Filtro per ruolo: la funzione puo_vedere(indicatore, ruolo, livello) legge il registro degli indicatori.
+L'HR vede un dato della singola persona solo per gli indicatori di orario, e solo se l'opzione avvisi_orario_hr è attiva.
+Consenso: il medico vede il check-in solo se consenso_medico è attivo. Se il lavoratore revoca il consenso, il check-in sparisce subito.
+Registro degli accessi: ogni apertura della scheda di una persona scrive nella tabella audit chi l'ha aperta, con quale ruolo, che cosa e quando.
+Conservazione limitata: con RETENTION_MESI = 24 i dati più vecchi vengono cancellati all'avvio dell'app.
+Nessun dato reale e nessun dato in chiaro nei log. La demo usa solo il dataset sintetico.
+Struttura del repository e registro degli indicatori
+Il cuore elegante è il registro. Ogni indicatore è una funzione pura, che riceve tabelle e restituisce una tabella, e porta con sé le sue informazioni: livello, chi può vederlo, fonte. Le viste, i semafori e i filtri privacy leggono tutti dal registro. Per aggiungere un indicatore basta scrivere una funzione e aggiungere una riga in soglie.yaml.
+burnout-poc/├── app.py                  # entrata Streamlit, selettore del ruolo├── pages/│   ├── 1_Caricamento.py│   ├── 2_HR.py│   ├── 3_Medico.py│   └── 4_Lavoratore.py├── core/│   ├── ingest.py           # Excel, campi ammessi, validazione, pseudonimizzazione│   ├── indicators.py       # registro + funzioni pure│   ├── scoring.py          # soglie → semafori, punteggi, primi 3 fattori│   ├── privacy.py          # K_MIN, filtro per ruolo, consenso, audit│   └── store.py            # SQLite├── config/soglie.yaml├── data/genera_dataset.py  # dataset sintetico├── tests/test_indicators.py└── requirements.txt        # streamlit, pandas, openpyxl, pyyaml, plotly
+La regola comune: ogni indicatore restituisce le colonne codice (oppure reparto), mese e valore. Gli indicatori calcolati sulla persona vengono poi aggregati per reparto da scoring.py, che fa la media e applica la soglia K_MIN.
+# core/indicators.pyfrom dataclasses import dataclassfrom typing import Callableimport pandas as pd@dataclass(frozen=True)class Indicatore:    id: str    nome: str    livello: str            # "persona" o "reparto"    visibile_a: frozenset   # {"hr", "medico", "lavoratore"}    fonte: str    calcola: Callable[[dict[str, pd.DataFrame]], pd.DataFrame]REGISTRO: dict[str, Indicatore] = {}def indicatore(**meta):    def registra(fn):        REGISTRO[meta["id"]] = Indicatore(calcola=fn, **meta)        return fn    return registra@indicatore(id="rientri_rapidi", nome="Rientri rapidi", livello="persona",            visibile_a=frozenset({"hr", "medico"}), fonte="Vedaa e coll.")def rientri_rapidi(d):    t = d["turni"].sort_values(["codice", "inizio"]).copy()    pausa = t.groupby("codice")["inizio"].shift(-1) - t["fine"]    t["rapido"] = pausa < pd.Timedelta(hours=11)    t["mese"] = t["inizio"].dt.to_period("M")    return (t.groupby(["codice", "mese"], as_index=False)["rapido"].sum()             .rename(columns={"rapido": "valore"}))
+Nel file di configurazione ci sono valori di esempio, non validati, da tarare con il pilota:
+# config/soglie.yamlk_min: 6retention_mesi: 24avvisi_orario_hr: falsefasce: {basso: 34, alto: 66}indicatori:  rientri_rapidi:      {giallo: 2, rosso: 5}   # pause sotto le 11 ore al mese  turni_lunghi:        {giallo: 2, rosso: 4}   # turni di 12 ore o piu' al mese  pazienti_infermiere: {giallo: 6, rosso: 8}  checkin:             {giallo: 3, rosso: 4}
+Dataset sintetico per la demo
+Il dataset è una clinica finta: 150 dipendenti, 6 reparti, 24 mesi di dati (dicembre 2024 – novembre 2026). Viene generato con un seme fisso, così la demo esce sempre uguale.
+Reparto
+Persone
+Cosa deve mostrare la demo
+Medicina
+30
+Rosso. Negli ultimi 6 mesi c'è carenza di personale: i pazienti per infermiere passano da 6 a 9, i rientri rapidi aumentano e ci sono 3 dimissioni negli ultimi 4 mesi. Ci sono anche 4 persone con un peggioramento individuale (più rientri rapidi, più assenze brevi, check-in a 4).
+Nucleo Alzheimer (RSA)
+30
+Giallo. Aggressioni frequenti e poche altre criticità.
+Chirurgia
+28
+Giallo-verde. Molti turni da 12 ore, ma stabili.
+Cardiologia
+24
+Verde.
+Riabilitazione
+22
+Verde.
+Ambulatori
+16
+Verde, solo turni di giorno. È il reparto di confronto.
+Regole di generazione
+Turni da 8 ore: 7-14, 14-21, 21-7.
+Turni da 12 ore: 7-19 e 19-7, in Chirurgia e Medicina.
+Assenze per malattia: casuali (distribuzione di Poisson), con una frequenza più alta per le persone del reparto sotto pressione.
+Check-in: risponde circa il 60% delle persone ogni mese.
+Cosa produce lo script data/genera_dataset.py:
+demo.xlsx, con gli stessi 7 fogli del modello di import;
+checkin_demo.csv, per precaricare i check-in;
+modello_import.xlsx, vuoto, da dare ai clienti.
+Piano di lavoro e script della demo
+Si lavora in 3 filoni paralleli: Dev 1 sui dati, Dev 2 sul motore di calcolo, Dev 3 sull'interfaccia. Il codice si congela 2 ore prima del pitch.
+Sabato, 20:30-21:00 (tutti insieme)
+☐ Congelare lo schema dei 7 fogli e il formato di output degli indicatori (codice/reparto, mese, valore).
+Sabato, dalle 21:00 a fine serata
+☐ Dev 1: genera_dataset.py, poi ingest.py (campi ammessi, validazione, HMAC).
+☐ Dev 2: il registro degli indicatori e i 6 indicatori di orario e assenze.
+☐ Dev 3: app.py, il selettore del ruolo e la pagina di caricamento.
+Domenica mattina
+☐ Dev 1: privacy.py (K_MIN, filtro per ruolo, consenso, audit) e store.py.
+☐ Dev 2: gli altri indicatori, scoring.py e soglie.yaml.
+☐ Dev 3: le viste HR e Medico.
+Domenica, fino a 2 ore prima del pitch
+☐ Dev 1: test e correzione dei bug.
+☐ Dev 2: la spiegazione con i 3 fattori principali e i test degli indicatori.
+☐ Dev 3: la vista Lavoratore e la rifinitura grafica.
+☐ Tutti: codice congelato, solo prove della demo.
+Script della demo, 90 secondi
+Caricamento (15 s): "Carico l'Excel della clinica: 150 persone, i nomi spariscono e al loro posto restano i codici."
+Vista HR (25 s): Medicina è rossa. Il perché: pazienti per infermiere, rientri rapidi, dimissioni. Poi il costo del turnover.
+Vista medico (25 s): in Medicina ci sono 4 codici da contattare. Apro la scheda di uno, con il peggioramento mese per mese, e clicco "contattato".
+Vista lavoratore (15 s): check-in da 10 secondi, risultato, consenso.
+Ritorno all'HR (10 s): "4 persone prese in carico", senza sapere chi sono.
+Fuori dal PoC: verso l'MVP
+Queste cose non vanno fatte questo weekend, ma vanno citate se la giuria chiede "e dopo?".
+Area
+Cosa serve
+Accesso
+Login vero con i ruoli, più clienti separati tra loro
+Infrastruttura
+Database PostgreSQL su cloud nell'Unione Europea, dati cifrati, backup
+Pseudonimizzazione dal cliente
+Un piccolo script calcola i codici prima del caricamento, così la matricola non esce mai dalla struttura
+Integrazioni
+Connettori ai gestionali di paghe e turni (API oppure esportazioni automatiche)
+Report legale
+Esportazione del report di reparto da allegare al documento di valutazione dei rischi (DVR)
+Legale
+Valutazione d'impatto sulla privacy (DPIA), informativa, contratto da responsabile del trattamento, coinvolgimento del rappresentante dei lavoratori per la sicurezza (RLS), verifica AI Act, parere di un avvocato del lavoro sugli avvisi d'orario all'HR
+Licenze
+Licenza commerciale del BAT
+Validazione scientifica
+Con un partner universitario: confrontare il punteggio di reparto con il BAT medio e con dimissioni e assenze dei 6-12 mesi successivi. Solo dopo, eventuali pesi diversi tra gli indicatori
+Facoltativo
+Un assistente che spiega il risultato citando i manuali INAIL (ricerca su documenti, RAG)
