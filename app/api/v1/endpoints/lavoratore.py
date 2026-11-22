@@ -4,7 +4,8 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.entities import Dipendente, Checkin, AuditLog
+from app.models.entities import Account, Dipendente, Checkin, AuditLog
+from app.api.v1.endpoints.auth import require_lavoratore
 from app.schemas.schemas import (
     CheckinRequest,
     CheckinResponse,
@@ -21,8 +22,14 @@ from app.core.indicators import REGISTRO
 
 router = APIRouter()
 
+def _own_code(account: Account, code: str) -> str:
+    if not account.employee_code or account.employee_code != code.strip():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Puoi accedere solo ai dati associati al tuo account.")
+    return account.employee_code
+
 @router.post("/accesso", summary="Verifica e accesso del lavoratore con il proprio codice")
-def lavoratore_accesso(codice: str, db: Session = Depends(get_db)):
+def lavoratore_accesso(codice: str, account: Account = Depends(require_lavoratore), db: Session = Depends(get_db)):
+    codice = _own_code(account, codice)
     dip = db.query(Dipendente).filter(Dipendente.codice == codice.strip()).first()
     if not dip:
         raise HTTPException(
@@ -37,7 +44,8 @@ def lavoratore_accesso(codice: str, db: Session = Depends(get_db)):
     }
 
 @router.get("/mio-stato/{codice}", response_model=LavoratoreStatoResponse, summary="Visualizzazione del proprio stato e spiegazione semplice")
-def get_mio_stato(codice: str, db: Session = Depends(get_db)):
+def get_mio_stato(codice: str, account: Account = Depends(require_lavoratore), db: Session = Depends(get_db)):
+    codice = _own_code(account, codice)
     dip = db.query(Dipendente).filter(Dipendente.codice == codice.strip()).first()
     if not dip:
         raise HTTPException(
@@ -93,7 +101,7 @@ def get_mio_stato(codice: str, db: Session = Depends(get_db)):
         "richiesta_colloquio": c.richiesta_colloquio,
     } for c in checkins]
 
-    consenso_attivo = checkins[0].consenso_medico if checkins else True
+    consenso_attivo = checkins[0].consenso_medico if checkins else False
 
     return LavoratoreStatoResponse(
         codice=dip.codice,
@@ -107,7 +115,10 @@ def get_mio_stato(codice: str, db: Session = Depends(get_db)):
     )
 
 @router.post("/checkin", response_model=CheckinResponse, summary="Compilazione check-in mensile")
-def invia_checkin(req: CheckinRequest, db: Session = Depends(get_db)):
+def invia_checkin(req: CheckinRequest, account: Account = Depends(require_lavoratore), db: Session = Depends(get_db)):
+    _own_code(account, req.codice)
+    if req.richiesta_colloquio and not req.consenso_medico:
+        raise HTTPException(status_code=422, detail="Per chiedere un colloquio è necessario acconsentire alla condivisione con il medico.")
     dip = db.query(Dipendente).filter(Dipendente.codice == req.codice.strip()).first()
     if not dip:
         raise HTTPException(
@@ -163,8 +174,10 @@ def invia_checkin(req: CheckinRequest, db: Session = Depends(get_db)):
 def update_consenso(
     codice: str,
     req: ConsensoUpdateRequest,
+    account: Account = Depends(require_lavoratore),
     db: Session = Depends(get_db),
 ):
+    codice = _own_code(account, codice)
     checkins = db.query(Checkin).filter(Checkin.codice == codice.strip()).all()
     if not checkins:
         raise HTTPException(
@@ -194,21 +207,12 @@ def update_consenso(
     }
 
 @router.post("/richiesta-colloquio/{codice}", summary="Invia richiesta di colloquio al medico competente")
-def richiesta_colloquio(codice: str, db: Session = Depends(get_db)):
+def richiesta_colloquio(codice: str, account: Account = Depends(require_lavoratore), db: Session = Depends(get_db)):
+    codice = _own_code(account, codice)
     chk = db.query(Checkin).filter(Checkin.codice == codice.strip()).order_by(Checkin.data.desc()).first()
-    if chk:
-        chk.richiesta_colloquio = True
-        chk.consenso_medico = True  # La richiesta implica la possibilità per il medico di contattarlo
-    else:
-        # Se non ha mai fatto checkin, crea una registrazione ad hoc
-        nuovo = Checkin(
-            codice=codice,
-            data=date.today(),
-            domanda_singola=3,
-            consenso_medico=True,
-            richiesta_colloquio=True,
-        )
-        db.add(nuovo)
+    if not chk or not chk.consenso_medico:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Per chiedere un colloquio invia un check-in con consenso esplicito al medico.")
+    chk.richiesta_colloquio = True
 
     audit = AuditLog(
         utente_id=codice,

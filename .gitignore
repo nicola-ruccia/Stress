@@ -28,12 +28,13 @@ ENV/
 *.sqlite3
 *.db
 *.db-journal
-burnout.db
+Somalìa.db
 uploads/
 exports/
 
 # Environments & Secrets
 .env
+.env.*
 !.env.example
 *.pem
 *.key

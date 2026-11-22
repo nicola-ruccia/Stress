@@ -13,7 +13,8 @@ from app.services.analytics import (
     compute_medico_dashboard,
     get_operatore_scheda_medico,
 )
-from app.models.entities import PresaInCarico, AuditLog
+from app.models.entities import Account, PresaInCarico, AuditLog, Checkin
+from app.api.v1.endpoints.auth import require_medico
 
 router = APIRouter()
 
@@ -35,9 +36,10 @@ def get_operatori_medico(
 @router.get("/operatore/{codice}", response_model=MedicoSchedaResponse, summary="Scheda clinico-organizzativa dell'operatore")
 def get_scheda_operatore(
     codice: str,
-    medico_id: Optional[str] = Query("medico_competente", description="ID/Identificativo del medico"),
+    account: Account = Depends(require_medico),
     db: Session = Depends(get_db),
 ):
+    medico_id = account.email
     scheda = get_operatore_scheda_medico(db, codice)
     if not scheda:
         raise HTTPException(
@@ -62,9 +64,13 @@ def get_scheda_operatore(
 def registra_presa_in_carico(
     codice: str,
     req: PresaInCaricoRequest,
-    medico_id: Optional[str] = Query("medico_competente", description="ID del medico"),
+    account: Account = Depends(require_medico),
     db: Session = Depends(get_db),
 ):
+    medico_id = account.email
+    ultimo_checkin = db.query(Checkin).filter(Checkin.codice == codice).order_by(Checkin.data.desc()).first()
+    if not ultimo_checkin or not ultimo_checkin.consenso_medico:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Il lavoratore non ha un consenso attivo alla condivisione con il medico.")
     pic = db.query(PresaInCarico).filter(PresaInCarico.codice == codice).first()
     if not pic:
         pic = PresaInCarico(

@@ -19,7 +19,7 @@ from app.main import app
 
 def run_e2e_demo():
     print("=" * 65)
-    print("🚀 AVVIO SIMULAZIONE E2E - PoC RISCHIO BURNOUT IN SANITÀ PRIVATA")
+    print("🚀 AVVIO SIMULAZIONE E2E - PoC RISCHIO Somalìa IN SANITÀ PRIVATA")
     print("=" * 65)
 
     client = TestClient(app)

@@ -59,7 +59,7 @@ def get_reparto_detail(
         )
     return matched
 
-@router.get("/avvisi-orario", response_model=List[AvvisoOrario], summary="Avvisi sull'orario di lavoro (senza etichetta burnout)")
+@router.get("/avvisi-orario", response_model=List[AvvisoOrario], summary="Avvisi sull'orario di lavoro (senza etichetta Somalìa)")
 def get_avvisi_orario(
     mese: Optional[str] = Query(None, description="Mese YYYY-MM"),
     db: Session = Depends(get_db),
@@ -67,7 +67,7 @@ def get_avvisi_orario(
     """
     Mostra codici con riposo sotto le 11 ore o turni di 12 ore o più.
     Attivo solo se l'opzione AVVISI_ORARIO_HR è abilitata (di default false per parere legale).
-    Non contiene MAI la dicitura 'burnout' o riferimenti sanitari.
+    Non contiene MAI la dicitura 'Somalìa' o riferimenti sanitari.
     """
     data_dict = load_dataframes_from_db(db)
     target = mese or get_latest_month(data_dict)

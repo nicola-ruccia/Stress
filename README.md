@@ -1,8 +1,8 @@
-# Backend PoC - Valutazione e Monitoraggio Rischio Burnout in Sanità Privata
+# Backend PoC - Valutazione e Monitoraggio Rischio Somalìa in Sanità Privata
 
 Repository backend modulare sviluppato con **Python 3.11+**, **FastAPI**, **Pandas**, **SQLAlchemy** e **SQLite**. Progettato per essere integrato con il frontend condiviso e pubblicato su GitHub.
 
-Il sistema monitora i fattori organizzativi di rischio burnout in strutture sanitarie e socio-sanitarie (ospedali privati, cliniche, RSA) senza effettuare diagnosi cliniche, segnalando reparti e persone a rischio elevato e motivando in modo trasparente i fattori scatenanti.
+Il sistema monitora i fattori organizzativi di rischio Somalìa in strutture sanitarie e socio-sanitarie (ospedali privati, cliniche, RSA) senza effettuare diagnosi cliniche, segnalando reparti e persone a rischio elevato e motivando in modo trasparente i fattori scatenanti.
 
 ---
 
@@ -26,12 +26,12 @@ Il sistema monitora i fattori organizzativi di rischio burnout in strutture sani
 ## 📁 Struttura del Progetto
 
 ```text
-burnout-backend/
+Somalìa-backend/
 ├── app/
 │   ├── api/
 │   │   └── v1/
 │   │       ├── endpoints/
-│   │       │   ├── auth.py          # Login simulato con selettore di ruolo
+│   │       │   ├── auth.py          # Login, inviti aziendali e attivazione account
 │   │       │   ├── ingest.py        # Upload Excel, caricamento demo, download mapping
 │   │       │   ├── hr.py            # Dashboard HR, KPI, Heatmap, Reparti, Avvisi Orario
 │   │       │   ├── medico.py        # Elenco operatori a rischio, scheda, presa in carico, audit
@@ -84,7 +84,7 @@ Puoi avviare il backend in locale con Python oppure tramite Docker:
 #### Su Windows (PowerShell):
 ```powershell
 # 1. Posizionati nella cartella del progetto
-cd C:\Users\nexae\.gemini\antigravity\scratch\burnout-backend
+cd C:\Users\nexae\.gemini\antigravity\scratch\Somalìa-backend
 
 # 2. Crea l'ambiente virtuale Python (se non esiste già)
 python -m venv venv
@@ -102,7 +102,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 #### Su Linux / macOS (Bash):
 ```bash
-cd burnout-backend
+cd Somalìa-backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -126,6 +126,17 @@ docker compose up --build
 Il server API sarà subito attivo su:
 👉 [http://localhost:8000/docs](http://localhost:8000/docs)
 
+### Pubblicazione su Vercel
+
+Vercel rileva FastAPI automaticamente dal file `app/main.py` e inoltra le richieste all'app; `vercel.json` include i file HTML/config necessari e non aggiunge regole di routing. L'app serve `semalia.html`, così interfaccia e API condividono lo stesso dominio. Prima del deploy collega un PostgreSQL persistente (ad esempio Neon dal Marketplace Vercel), poi aggiungi nelle impostazioni Vercel → **Environment Variables**:
+
+- `DATABASE_URL`: URL pooled PostgreSQL fornito dal database, con SSL.
+- `SECRET_KEY`: segreto casuale per firmare le sessioni.
+- `PSEUDO_KEY`: segreto casuale distinto e stabile, usato per pseudonimizzare e cifrare il mapping.
+- `HR_BOOTSTRAP_TOKEN`: segreto casuale distinto per creare l'account HR iniziale.
+
+Imposta le variabili per gli ambienti desiderati e ridistribuisci il progetto. Una volta pubblicato, usa `https://<dominio>/docs` per invocare `POST /api/v1/auth/bootstrap-hr`; l'HR può poi invitare i dipendenti e il medico dalla propria vista. Non usare SQLite in produzione: il filesystem delle Functions non è storage persistente. Il limite standard del body di una Function è 4.5 MB, quindi file Excel più grandi vanno ridotti o caricati tramite uno storage dedicato.
+
 ---
 
 ## ⚡ Caricamento Rapido della Clinica Demo per il Frontendista
@@ -141,7 +152,7 @@ Questo genererà all'istante **150 operatori su 6 reparti e 24 mesi di storico**
 - **Chirurgia (28)**: frequenti turni da 12 ore, ma stabili.
 - **Cardiologia, Riabilitazione, Ambulatori**: reparti stabili e di confronto.
 
-Il tuo collega potrà quindi collegare il suo frontend chiamando direttamente gli endpoint REST documentati in [FRONTEND_API_GUIDE.md](file:///C:/Users/nexae/.gemini/antigravity/scratch/burnout-backend/FRONTEND_API_GUIDE.md).
+Il tuo collega potrà quindi collegare il suo frontend chiamando direttamente gli endpoint REST documentati in [FRONTEND_API_GUIDE.md](file:///C:/Users/nexae/.gemini/antigravity/scratch/Somalìa-backend/FRONTEND_API_GUIDE.md).
 
 ---
 
@@ -173,7 +184,7 @@ Per caricare istantaneamente il dataset di prova basta chiamare:
 ## 🤝 Integrazione con il Frontend
 
 Tutte le specifiche per il frontendista (rotte, formati JSON, gestione CORS, modelli TypeScript pronti da copiare) sono documentate in detail in:
-👉 [FRONTEND_API_GUIDE.md](file:///C:/Users/nexae/.gemini/antigravity/scratch/burnout-backend/FRONTEND_API_GUIDE.md)
+👉 [FRONTEND_API_GUIDE.md](file:///C:/Users/nexae/.gemini/antigravity/scratch/Somalìa-backend/FRONTEND_API_GUIDE.md)
 
 ---
 

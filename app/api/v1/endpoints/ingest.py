@@ -6,18 +6,17 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.ingest import process_excel_upload
 from app.schemas.schemas import IngestReportResponse
+from app.api.v1.endpoints.auth import require_hr, require_medico
+from app.services.mapping_archive import store_mapping, read_mapping
 
 router = APIRouter()
-
-# Conserva in memoria l'ultimo mapping generato (da distribuire esclusivamente al medico/admin)
-LAST_MAPPING_CSV = ""
 
 @router.post("/upload-excel", response_model=IngestReportResponse, summary="Carica file Excel clinica (7 fogli)")
 async def upload_excel(
     file: UploadFile = File(...),
+    _account=Depends(require_hr),
     db: Session = Depends(get_db),
 ):
-    global LAST_MAPPING_CSV
     if not file.filename.endswith((".xlsx", ".xls")):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -28,7 +27,7 @@ async def upload_excel(
     try:
         report, df_mapping = process_excel_upload(contents, file.filename, db)
         # Salva CSV del mapping per il download immediato
-        LAST_MAPPING_CSV = df_mapping.to_csv(index=False)
+        store_mapping(db, df_mapping.to_csv(index=False))
 
         return IngestReportResponse(
             timestamp=report["timestamp"],
@@ -47,15 +46,15 @@ async def upload_excel(
         )
 
 @router.get("/download-mapping", summary="Scarica decodifica matricola -> codice (Riservato Medico/Admin)")
-def download_mapping():
-    global LAST_MAPPING_CSV
-    if not LAST_MAPPING_CSV:
+def download_mapping(_account=Depends(require_medico), db: Session = Depends(get_db)):
+    mapping = read_mapping(db)
+    if not mapping:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Nessun mapping generato recentemente. Eseguire prima un import Excel.",
         )
 
-    stream = io.StringIO(LAST_MAPPING_CSV)
+    stream = io.StringIO(mapping)
     return StreamingResponse(
         iter([stream.getvalue()]),
         media_type="text/csv",
@@ -63,8 +62,11 @@ def download_mapping():
     )
 
 @router.post("/load-demo", summary="Genera e precarica il dataset sintetico demo nel database")
-def load_demo(db: Session = Depends(get_db)):
+def load_demo(_account=Depends(require_hr), db: Session = Depends(get_db)):
     from app.services.dataset_generator import genera_dataset_demo
+    from app.models.entities import Dipendente
+    if db.query(Dipendente).first():
+        raise HTTPException(status_code=409, detail="Lo spazio aziendale contiene già dati. Il dataset demo non viene sovrascritto.")
     try:
         report = genera_dataset_demo(db)
         return {

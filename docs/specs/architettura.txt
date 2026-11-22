@@ -1,7 +1,7 @@
-﻿Architettura software – PoC rischio burnout in sanità privata
+﻿Architettura software – PoC rischio Somalìa in sanità privata
 Nov 21, 2026 · @Libellula
 Obiettivo e principi
-Entro domenica costruiamo una sola app Python (Streamlit). L'app legge un Excel con dati di paghe, HR e turni, calcola indicatori spiegabili di rischio burnout e li mostra in tre viste separate per ruolo: HR, medico competente e lavoratore.
+Entro domenica costruiamo una sola app Python (Streamlit). L'app legge un Excel con dati di paghe, HR e turni, calcola indicatori spiegabili di rischio Somalìa e li mostra in tre viste separate per ruolo: HR, medico competente e lavoratore.
 Il sistema non fa diagnosi: segnala reparti e persone a rischio elevato e mostra perché.
 Principi di progetto
 Semplice: un solo processo Python e un database SQLite. Niente microservizi e niente machine learning.
@@ -95,7 +95,7 @@ Assenze brevi per malattia
 episodi di 1-3 giorni negli ultimi 3 mesi, confrontati con i 3 mesi precedenti
 persona → reparto
 medico; HR solo per reparto
-Evento sentinella INAIL; studi su burnout e assenze
+Evento sentinella INAIL; studi su Somalìa e assenze
 infortuni
 Infortuni
 numero e giorni persi, ultimi 12 mesi
@@ -107,7 +107,7 @@ Aggressioni al personale
 segnalazioni al mese
 reparto
 HR, medico
-Studi su violenza e burnout
+Studi su violenza e Somalìa
 dimissioni
 Dimissioni
 tasso negli ultimi 12 mesi
@@ -128,7 +128,7 @@ HR, medico
 Evento sentinella INAIL
 checkin
 Check-in, domanda singola
-ultimo valore da 1 a 5 (3 o più = sintomi di burnout)
+ultimo valore da 1 a 5 (3 o più = sintomi di Somalìa)
 persona
 lavoratore; medico solo con consenso; HR solo come % del reparto, con almeno 6 risposte
 Domanda singola validata (sensibilità 83%, specificità 87%)
@@ -162,7 +162,7 @@ Dettaglio del reparto:
 semaforo di ogni indicatore;
 i 3 fattori principali;
 un'azione suggerita per ogni fattore (testo fisso, ad esempio per i rientri rapidi: "rivedere la rotazione dei turni").
-Avvisi sull'orario (opzione spenta di default, da verificare con un avvocato del lavoro): codici con riposo sotto le 11 ore o turni di 12 ore o più, senza nessuna etichetta "burnout".
+Avvisi sull'orario (opzione spenta di default, da verificare con un avvocato del lavoro): codici con riposo sotto le 11 ore o turni di 12 ore o più, senza nessuna etichetta "Somalìa".
 Non mostra mai: assenze individuali, check-in, BAT-12.
 Vista medico competente o psicologo
 Elenco dei codici ordinato per punteggio, filtrabile per reparto, con la bandiera "da contattare".
@@ -189,7 +189,7 @@ Conservazione limitata: con RETENTION_MESI = 24 i dati più vecchi vengono cance
 Nessun dato reale e nessun dato in chiaro nei log. La demo usa solo il dataset sintetico.
 Struttura del repository e registro degli indicatori
 Il cuore elegante è il registro. Ogni indicatore è una funzione pura, che riceve tabelle e restituisce una tabella, e porta con sé le sue informazioni: livello, chi può vederlo, fonte. Le viste, i semafori e i filtri privacy leggono tutti dal registro. Per aggiungere un indicatore basta scrivere una funzione e aggiungere una riga in soglie.yaml.
-burnout-poc/├── app.py                  # entrata Streamlit, selettore del ruolo├── pages/│   ├── 1_Caricamento.py│   ├── 2_HR.py│   ├── 3_Medico.py│   └── 4_Lavoratore.py├── core/│   ├── ingest.py           # Excel, campi ammessi, validazione, pseudonimizzazione│   ├── indicators.py       # registro + funzioni pure│   ├── scoring.py          # soglie → semafori, punteggi, primi 3 fattori│   ├── privacy.py          # K_MIN, filtro per ruolo, consenso, audit│   └── store.py            # SQLite├── config/soglie.yaml├── data/genera_dataset.py  # dataset sintetico├── tests/test_indicators.py└── requirements.txt        # streamlit, pandas, openpyxl, pyyaml, plotly
+Somalìa-poc/├── app.py                  # entrata Streamlit, selettore del ruolo├── pages/│   ├── 1_Caricamento.py│   ├── 2_HR.py│   ├── 3_Medico.py│   └── 4_Lavoratore.py├── core/│   ├── ingest.py           # Excel, campi ammessi, validazione, pseudonimizzazione│   ├── indicators.py       # registro + funzioni pure│   ├── scoring.py          # soglie → semafori, punteggi, primi 3 fattori│   ├── privacy.py          # K_MIN, filtro per ruolo, consenso, audit│   └── store.py            # SQLite├── config/soglie.yaml├── data/genera_dataset.py  # dataset sintetico├── tests/test_indicators.py└── requirements.txt        # streamlit, pandas, openpyxl, pyyaml, plotly
 La regola comune: ogni indicatore restituisce le colonne codice (oppure reparto), mese e valore. Gli indicatori calcolati sulla persona vengono poi aggregati per reparto da scoring.py, che fa la media e applica la soglia K_MIN.
 # core/indicators.pyfrom dataclasses import dataclassfrom typing import Callableimport pandas as pd@dataclass(frozen=True)class Indicatore:    id: str    nome: str    livello: str            # "persona" o "reparto"    visibile_a: frozenset   # {"hr", "medico", "lavoratore"}    fonte: str    calcola: Callable[[dict[str, pd.DataFrame]], pd.DataFrame]REGISTRO: dict[str, Indicatore] = {}def indicatore(**meta):    def registra(fn):        REGISTRO[meta["id"]] = Indicatore(calcola=fn, **meta)        return fn    return registra@indicatore(id="rientri_rapidi", nome="Rientri rapidi", livello="persona",            visibile_a=frozenset({"hr", "medico"}), fonte="Vedaa e coll.")def rientri_rapidi(d):    t = d["turni"].sort_values(["codice", "inizio"]).copy()    pausa = t.groupby("codice")["inizio"].shift(-1) - t["fine"]    t["rapido"] = pausa < pd.Timedelta(hours=11)    t["mese"] = t["inizio"].dt.to_period("M")    return (t.groupby(["codice", "mese"], as_index=False)["rapido"].sum()             .rename(columns={"rapido": "valore"}))
 Nel file di configurazione ci sono valori di esempio, non validati, da tarare con il pilota:

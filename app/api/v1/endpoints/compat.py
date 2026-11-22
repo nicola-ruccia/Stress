@@ -9,7 +9,9 @@ from app.services.analytics import (
     get_latest_month,
 )
 from app.core.ingest import process_excel_upload
+from app.services.mapping_archive import store_mapping
 from app.models.entities import Checkin, Dipendente, PresaInCarico
+from app.api.v1.endpoints.auth import require_hr
 from datetime import date
 
 router = APIRouter()
@@ -28,22 +30,23 @@ class FlavioCheckinPayload(BaseModel):
     manager_relation: Optional[int] = 3
     consent_medical_contact: Optional[bool] = True
 
-@router.get("/health", summary="Healthcheck per il frontend Stressa")
+@router.get("/health", summary="Healthcheck per il frontend Semalìa")
 def compat_health():
     return {
         "status": "ok",
         "apiOnline": True,
-        "service": "Stressa Burnout Backend Engine",
+        "service": "Semalìa Backend Engine",
     }
 
-@router.get("/departments", summary="Elenco reparti per la vista HR di Stressa")
+@router.get("/departments", summary="Elenco reparti per la vista HR di Semalìa")
 def get_compat_departments(
     sector: Optional[str] = Query(None),
+    _account=Depends(require_hr),
     db: Session = Depends(get_db),
 ):
     """
     Restituisce i reparti calcolati dal motore di scoring del backend
-    nel formato atteso dal frontend 'Stressa'.
+    nel formato atteso dal frontend 'Semalìa'.
     """
     data_dict = load_dataframes_from_db(db)
     if data_dict["dipendenti"].empty:
@@ -103,6 +106,7 @@ def get_compat_departments(
 def update_department_action(
     department_id: str,
     payload: ActionUpdatePayload,
+    _account=Depends(require_hr),
 ):
     return {
         "status": "success",
@@ -111,52 +115,30 @@ def update_department_action(
         "action_status": payload.status,
     }
 
-@router.post("/checkin", summary="Invia check-in rapido da Stressa")
+@router.post("/checkin", summary="Invia check-in rapido da Semalìa")
 def compat_submit_checkin(
     payload: FlavioCheckinPayload,
-    db: Session = Depends(get_db),
 ):
-    # Cerca un operatore del reparto o crea record checkin
-    target_dip = db.query(Dipendente).filter(
-        Dipendente.reparto.ilike(f"%{payload.department_id.split('-')[-1]}%")
-    ).first()
+    raise HTTPException(status_code=410, detail="Endpoint dismesso: accedi come lavoratore e usa /api/v1/lavoratore/checkin.")
 
-    codice = target_dip.codice if target_dip else f"chk_{date.today().strftime('%m%d')}"
-
-    nuovo_chk = Checkin(
-        codice=codice,
-        data=date.today(),
-        domanda_singola=payload.stress_level,
-        consenso_medico=payload.consent_medical_contact,
-        richiesta_colloquio=(payload.stress_level >= 4),
-    )
-    db.add(nuovo_chk)
-    db.commit()
-
-    return {
-        "status": "success",
-        "id": nuovo_chk.id,
-        "codice": codice,
-        "stress_level": payload.stress_level,
-        "consent": payload.consent_medical_contact,
-    }
-
-@router.post("/ingest/upload", summary="Upload multi-file da Stressa")
+@router.post("/ingest/upload", summary="Upload multi-file da Semalìa")
 async def compat_upload(
     file: Optional[UploadFile] = File(None),
     sector: Optional[str] = Form("operazioni"),
+    _account=Depends(require_hr),
     db: Session = Depends(get_db),
 ):
     if not file:
-        return {"status": "success", "departments_updated": 6}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Carica un workbook Excel aziendale.")
 
     contents = await file.read()
     try:
-        report, _ = process_excel_upload(contents, file.filename, db)
+        report, mapping = process_excel_upload(contents, file.filename, db)
+        store_mapping(db, mapping.to_csv(index=False))
         return {
             "status": "success",
             "departments_updated": len(report["righe_accettate"]),
             "report": report,
         }
     except Exception as e:
-        return {"status": "success", "departments_updated": 6, "note": str(e)}
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Importazione non riuscita: {str(e)}")

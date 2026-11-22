@@ -10,6 +10,7 @@ from app.models.entities import (
     PresaInCarico,
     AuditLog,
     ImportHistory,
+    ImportMapping,
 )
 
 __all__ = [
@@ -24,4 +25,5 @@ __all__ = [
     "PresaInCarico",
     "AuditLog",
     "ImportHistory",
+    "ImportMapping",
 ]

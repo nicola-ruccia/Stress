@@ -1,6 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
 from app.main import app
+from app.api.v1.endpoints.auth import _password_hash
+from app.db.session import Base, get_db
+from app.models.entities import Account
 
 client = TestClient(app)
 
@@ -19,17 +26,46 @@ def test_config_soglie_endpoint():
     assert "fasce" in data
     assert "azioni_suggerite" in data
 
-def test_demo_login_endpoint():
-    # Login HR
-    res = client.post("/api/v1/auth/demo-login", json={"ruolo": "hr"})
-    assert res.status_code == 200
-    assert res.json()["ruolo"] == "hr"
+def test_password_login_for_all_roles():
+    test_engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=test_engine)
+    test_sessions = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    test_password = "JudgeLoginTest2026!"
+    with test_sessions() as db:
+        for role in ("hr", "medico", "lavoratore"):
+            db.add(Account(
+                email=f"{role}@example.test",
+                role=role,
+                company="azienda-test",
+                employee_code="abc1234567" if role == "lavoratore" else None,
+                password_hash=_password_hash(test_password),
+            ))
+        db.commit()
 
-    # Login Lavoratore senza codice -> 400
-    res_bad = client.post("/api/v1/auth/demo-login", json={"ruolo": "lavoratore"})
-    assert res_bad.status_code == 400
+    def override_get_db():
+        with test_sessions() as db:
+            yield db
 
-    # Login Lavoratore con codice -> 200
-    res_ok = client.post("/api/v1/auth/demo-login", json={"ruolo": "lavoratore", "codice": "abc1234567"})
-    assert res_ok.status_code == 200
-    assert res_ok.json()["codice"] == "abc1234567"
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        for role in ("hr", "medico", "lavoratore"):
+            response = client.post("/api/v1/auth/login", json={
+                "email": f"{role}@example.test",
+                "password": test_password,
+            })
+            assert response.status_code == 200
+            assert response.json()["role"] == role
+            assert response.json()["access_token"]
+
+        invalid = client.post("/api/v1/auth/login", json={
+            "email": "hr@example.test",
+            "password": "wrong-password",
+        })
+        assert invalid.status_code == 401
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+        test_engine.dispose()

@@ -1,4 +1,5 @@
 import random
+import os
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Dict, List, Any
@@ -338,8 +339,8 @@ def esporta_file_demo():
     }
 
 def genera_dataset_demo(db: Session) -> Dict[str, Any]:
-    """Precarica direttamente il dataset sintetico nel database SQLite."""
-    files_info = esporta_file_demo()
+    """Precarica il dataset sintetico; su Vercel non scrive file nel filesystem runtime."""
+    files_info = {} if os.getenv("VERCEL") == "1" else esporta_file_demo()
     dfs = build_dataset_dataframes()
 
     # Pulisci tabelle esistenti

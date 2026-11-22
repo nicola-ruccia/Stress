@@ -108,10 +108,10 @@ class Checkin(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     codice = Column(String(10), ForeignKey("dipendenti.codice"), nullable=False, index=True)
     data = Column(Date, nullable=False, default=date.today, index=True)
-    domanda_singola = Column(Integer, nullable=False)  # 1..5 (>=3 = sintomi burnout)
+    domanda_singola = Column(Integer, nullable=False)  # 1..5 (>=3 = sintomi Somalìa)
     bat12_punteggio = Column(Float, nullable=True)  # media 1..5
     bat12_dettaglio = Column(Text, nullable=True)  # JSON con risposte ai 12 item
-    consenso_medico = Column(Boolean, nullable=False, default=True)  # Condivisibile con il medico
+    consenso_medico = Column(Boolean, nullable=False, default=False)  # Consenso esplicito, revocabile
     richiesta_colloquio = Column(Boolean, nullable=False, default=False)
 
     dipendente = relationship("Dipendente", back_populates="checkins")
@@ -159,3 +159,26 @@ class ImportHistory(Base):
     righe_accettate = Column(Integer, nullable=False, default=0)
     righe_scartate = Column(Integer, nullable=False, default=0)
     report_json = Column(Text, nullable=True)
+
+class ImportMapping(Base):
+    """Mapping raw matricole/codici pseudonimi, cifrato e confinato al tenant."""
+    __tablename__ = "import_mappings"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    encrypted_csv = Column(Text, nullable=False)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+class Account(Base):
+    """Credenziali e associazione verificata a un ruolo aziendale."""
+    __tablename__ = "accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(254), nullable=False, unique=True, index=True)
+    role = Column(String(20), nullable=False, index=True)
+    # Codice conservato nel database isolato dell'azienda (non nel DB centrale auth).
+    employee_code = Column(String(10), nullable=True)
+    company = Column(String(120), nullable=False)
+    password_hash = Column(String(256), nullable=True)
+    setup_token_hash = Column(String(64), nullable=True)
+    setup_expires_at = Column(DateTime, nullable=True)
+    active = Column(Boolean, nullable=False, default=True)

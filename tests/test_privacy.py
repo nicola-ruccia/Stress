@@ -26,7 +26,7 @@ def test_k_anonymity():
     assert is_k_min_satisfied(1) is False
 
 def test_rbac_privacy_rules():
-    # HR NON può mai vedere dati individuali di salute/burnout
+    # HR NON può mai vedere dati individuali di salute/Somalìa
     assert puo_vedere("checkin", "hr", livello="persona") is False
     assert puo_vedere("bat12", "hr", livello="persona") is False
     assert puo_vedere("malattia_brevi", "hr", livello="persona") is False

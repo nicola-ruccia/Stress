@@ -3,15 +3,46 @@ from datetime import date, datetime
 from pydantic import BaseModel, Field
 
 # ================= AUTH =================
-class DemoLoginRequest(BaseModel):
-    ruolo: str = Field(..., description="Ruolo: 'hr', 'medico', 'lavoratore', 'admin'")
-    codice: Optional[str] = Field(None, description="Obbligatorio per ruolo 'lavoratore'")
+class AccountBootstrapRequest(BaseModel):
+    bootstrap_token: str = Field(..., min_length=20)
+    email: str = Field(..., min_length=3, max_length=254)
+    company: str = Field(..., min_length=1, max_length=120)
+    password: str = Field(..., min_length=12, max_length=128)
 
-class DemoLoginResponse(BaseModel):
-    token: str
-    ruolo: str
-    codice: Optional[str] = None
-    messaggio: str
+class AccountInviteRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=254)
+    role: str = Field(..., description="hr, medico o lavoratore")
+    employee_identifier: Optional[str] = Field(None, description="Matricola aziendale, usata solo per il calcolo del codice pseudonimo e mai salvata")
+
+class AccountInviteResponse(BaseModel):
+    email: str
+    role: str
+    setup_token: str
+    expires_at: str
+    delivery_note: str
+
+class AccountSetupRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=254)
+    setup_token: str = Field(..., min_length=20)
+    password: str = Field(..., min_length=12, max_length=128)
+
+class AccountLoginRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=254)
+    password: str = Field(..., min_length=1, max_length=128)
+
+class AccountLoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str
+    email: str
+    company: str
+    employee_code: Optional[str] = None
+
+class AccountSummary(BaseModel):
+    id: int
+    email: str
+    role: str
+    active: bool
 
 # ================= INGESTION =================
 class IngestReportResponse(BaseModel):
@@ -127,7 +158,7 @@ class CheckinRequest(BaseModel):
     codice: str
     domanda_singola: int = Field(..., ge=1, le=5, description="Punteggio da 1 a 5 (>=3 segnala stress)")
     bat12_risposte: Optional[List[int]] = Field(None, description="12 risposte opzionali (1-5 ciascuna)")
-    consenso_medico: bool = Field(True, description="Consenso alla condivisione con il medico competente")
+    consenso_medico: bool = Field(False, description="Consenso esplicito alla condivisione con il medico competente")
     richiesta_colloquio: bool = Field(False, description="Richiesta di colloquio confidenziale con il medico")
 
 class CheckinResponse(BaseModel):

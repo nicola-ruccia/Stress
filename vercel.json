@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "app/main.py": {
+      "includeFiles": "{semalia.html,config/soglie.yaml,docs/DEMO_PRESENTATION_VIDEO.html}",
+      "excludeFiles": "{venv/**,.venv/**,.git/**,.pytest_cache/**,tests/**,data/tenants/**,**/*.db,**/*.sqlite3}"
+    }
+  }
+}

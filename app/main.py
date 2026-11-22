@@ -9,7 +9,7 @@ from app.db.session import init_db
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description=(
-        "Backend API per il monitoraggio del rischio burnout nella sanità privata.\n\n"
+        "Backend API per il monitoraggio del rischio Semalìa nella sanità privata.\n\n"
         "Caratteristiche architetturali principali:\n"
         "- **Privacy by Design**: Pseudonimizzazione HMAC all'import, k-anonymity (K_MIN=6), audit trail accessi.\n"
         "- **Spiegabilità scientifica**: 13 indicatori oggettivi (INAIL, BAT-12, turnistica, assenze) con semafori e top 3 fattori.\n"
@@ -24,7 +24,11 @@ app = FastAPI(
 # Configurazione CORS per abilitare il frontend (React, Next.js, Vite, Vue, ecc.)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS or ["*"],
+    allow_origins=list(dict.fromkeys([
+        *(settings.CORS_ORIGINS or []),
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+    ])),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,10 +53,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 @app.get("/", include_in_schema=False)
 def serve_root():
-    colleague_html = BASE_DIR / "stressa_piattaforma_aziendale_stress_burnout.html"
+    colleague_html = BASE_DIR / "semalia.html"
     if colleague_html.exists():
         return FileResponse(str(colleague_html))
-    return {"message": "Stressa Burnout Backend Running. See /docs for API."}
+    return {"message": "Semalìa backend running. See /docs for API."}
 
 @app.get("/video-demo", include_in_schema=False)
 def serve_video_demo():

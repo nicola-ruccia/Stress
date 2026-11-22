@@ -89,6 +89,7 @@ def load_dataframes_from_db(db: Session) -> Dict[str, pd.DataFrame]:
         "domanda_singola": c.domanda_singola,
         "bat12_punteggio": c.bat12_punteggio,
         "consenso_medico": c.consenso_medico,
+        "richiesta_colloquio": c.richiesta_colloquio,
     } for c in chk_q])
 
     return {
@@ -322,6 +323,17 @@ def compute_medico_dashboard(
     if dip.empty:
         return []
 
+    # La vista individuale del medico richiede consenso esplicito nell'ultimo check-in.
+    checkins = data_dict.get("checkin", pd.DataFrame())
+    if checkins.empty:
+        return []
+    latest_by_person = checkins.sort_values("data").groupby("codice", as_index=False).tail(1)
+    consented_codes = set(latest_by_person.loc[latest_by_person["consenso_medico"] == True, "codice"])
+    contact_codes = set(latest_by_person.loc[latest_by_person["richiesta_colloquio"] == True, "codice"])
+    dip = dip[dip["codice"].isin(consented_codes)]
+    if dip.empty:
+        return []
+
     if reparto_filtro:
         dip = dip[dip["reparto"] == reparto_filtro]
 
@@ -362,7 +374,7 @@ def compute_medico_dashboard(
                     ind_valori[ind_id] = float(df_rep["valore"].iloc[0])
 
         score_res = calcola_punteggio_sintetico(ind_valori)
-        da_contattare = verifica_da_contattare(checkin_val, bat12_val)
+        da_contattare = verifica_da_contattare(checkin_val, bat12_val) or codice in contact_codes
 
         pic = prese_in_carico_map.get(codice)
         stato_presa_in_carico = pic.stato if pic else "non_preso_in_carico"
@@ -401,6 +413,10 @@ def get_operatore_scheda_medico(
     if not dip:
         return None
 
+    latest_checkin = db.query(Checkin).filter(Checkin.codice == codice).order_by(Checkin.data.desc()).first()
+    if not latest_checkin or not latest_checkin.consenso_medico:
+        return None
+
     data_dict = load_dataframes_from_db(db)
     target_mese = get_latest_month(data_dict)
     ind_dfs = compute_all_indicators(data_dict)
@@ -436,7 +452,7 @@ def get_operatore_scheda_medico(
     # Checkin dell'operatore
     checkins = db.query(Checkin).filter(Checkin.codice == codice).order_by(Checkin.data.desc()).all()
     checkin_history = []
-    ultimo_consenso = True
+    ultimo_consenso = False
 
     if checkins:
         ultimo_consenso = checkins[0].consenso_medico

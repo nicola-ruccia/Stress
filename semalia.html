@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Stressa — Burnout prima delle dimissioni</title>
+  <title>Semalìa — Vediamo il burnout prima che diventi dimissioni</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -48,19 +48,64 @@
 
   <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"></div>
 
+  <section id="login-screen" class="fixed inset-0 z-[100] bg-slate-50 overflow-y-auto px-4 py-10">
+    <div class="max-w-md mx-auto mt-8 bg-white rounded-3xl border border-slate-200 shadow-xl p-7 space-y-5">
+      <div class="text-center space-y-2">
+        <svg aria-label="Semalìa" viewBox="0 0 430 100" class="h-14 mx-auto" xmlns="http://www.w3.org/2000/svg"><g fill="#421b29"><path d="M12 23C26 8 52 1 77 3 56 13 45 24 41 35c-3 8 2 13 11 17-17-1-30-8-30-19 0-4 2-8 5-12C20 27 16 29 12 33c4-5 8-8 13-11-4 0-8 0-13 1Z"/><path d="M22 53c17 2 29 9 28 19-1 9-13 17-38 23 11-7 17-14 18-20 1-7-5-12-16-15 8 0 15 1 21 4-5-5-9-8-13-11Z"/></g><text x="86" y="77" fill="#421b29" font-family="Bodoni 72, Didot, 'Times New Roman', serif" font-size="77" font-weight="600" letter-spacing="-4">Semalìa</text></svg>
+        <p class="text-sm text-slate-500">Accesso sicuro alla tua area</p>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button id="auth-tab-login" type="button" onclick="setAuthMode('login')" class="rounded-xl px-3 py-2 text-sm font-bold bg-blue-700 text-white">Accedi</button>
+        <button id="auth-tab-setup" type="button" onclick="setAuthMode('setup')" class="rounded-xl px-3 py-2 text-sm font-bold bg-slate-100 text-slate-700">Primo accesso</button>
+      </div>
+      <form id="auth-form" onsubmit="submitAuth(event)" class="space-y-3">
+        <label class="block text-sm font-semibold text-slate-700">Email aziendale<input id="auth-email" type="email" required autocomplete="username" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5" placeholder="nome@azienda.it"></label>
+        <label id="setup-token-wrap" class="hidden block text-sm font-semibold text-slate-700">Codice di attivazione ricevuto dall’HR<input id="auth-setup-token" type="text" autocomplete="one-time-code" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5"></label>
+        <label id="password-label" class="block text-sm font-semibold text-slate-700">Password<input id="auth-password" type="password" required minlength="12" autocomplete="current-password" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2.5"></label>
+        <div id="auth-error" class="hidden rounded-xl bg-red-50 text-red-700 p-3 text-sm" role="alert"></div>
+        <button id="auth-submit" type="submit" class="w-full rounded-xl bg-blue-700 hover:bg-blue-800 text-white px-4 py-3 font-bold">Accedi</button>
+        <section class="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3" aria-labelledby="demo-accounts-title">
+          <div>
+            <h2 id="demo-accounts-title" class="text-sm font-extrabold text-slate-800">Credenziali demo per i giudici</h2>
+            <p class="mt-1 text-xs text-slate-500">Account dimostrativi con dati sintetici. Seleziona un ruolo per compilare il login.</p>
+          </div>
+          <div class="space-y-2">
+            <button type="button" onclick="useDemoAccount('giudice.hr@demo.semalia.it','SemaliaHR2026!')" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-blue-400 hover:bg-blue-50 transition">
+              <span class="block text-xs font-extrabold uppercase tracking-wide text-blue-800">HR</span>
+              <span class="mt-1 block break-all text-xs text-slate-700">giudice.hr@demo.semalia.it</span>
+              <span class="mt-1 block text-xs text-slate-500">Password: <span class="font-semibold text-slate-700">SemaliaHR2026!</span></span>
+            </button>
+            <button type="button" onclick="useDemoAccount('giudice.medico@demo.semalia.it','SemaliaMedico2026!')" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-blue-400 hover:bg-blue-50 transition">
+              <span class="block text-xs font-extrabold uppercase tracking-wide text-blue-800">Medico</span>
+              <span class="mt-1 block break-all text-xs text-slate-700">giudice.medico@demo.semalia.it</span>
+              <span class="mt-1 block text-xs text-slate-500">Password: <span class="font-semibold text-slate-700">SemaliaMedico2026!</span></span>
+            </button>
+            <button type="button" onclick="useDemoAccount('giudice.dipendente@demo.semalia.it','SemaliaStaff2026!')" class="w-full rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-blue-400 hover:bg-blue-50 transition">
+              <span class="block text-xs font-extrabold uppercase tracking-wide text-blue-800">Dipendente</span>
+              <span class="mt-1 block break-all text-xs text-slate-700">giudice.dipendente@demo.semalia.it</span>
+              <span class="mt-1 block text-xs text-slate-500">Password: <span class="font-semibold text-slate-700">SemaliaStaff2026!</span></span>
+            </button>
+          </div>
+        </section>
+      </form>
+      <p class="text-xs text-slate-500 text-center">Al primo accesso inserisci il codice monouso ricevuto dall’HR e scegli la tua password. Per assistenza contatta l’amministratore aziendale.</p>
+    </div>
+  </section>
+
   <!-- BARRA SUPERIORE COMPATTA -->
   <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
       <!-- Logo + Tagline breve -->
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-blue-700 text-white flex items-center justify-center shadow-xs">
-          <i data-lucide="activity" class="w-5 h-5"></i>
-        </div>
-        <div>
-          <span class="font-display font-extrabold text-lg text-slate-900 leading-none">Stressa</span>
-          <p class="text-[11px] font-medium text-slate-500 mt-0.5">Burnout prima delle dimissioni</p>
-        </div>
-      </div>
+      <a href="/" aria-label="Semalìa, home" class="flex items-center">
+        <svg role="img" aria-label="Semalìa" viewBox="0 0 430 100" class="h-12 w-auto max-w-[min(58vw,270px)]" xmlns="http://www.w3.org/2000/svg">
+          <title>Semalìa</title>
+          <g fill="#421b29">
+            <path d="M12 23C26 8 52 1 77 3 56 13 45 24 41 35c-3 8 2 13 11 17-17-1-30-8-30-19 0-4 2-8 5-12C20 27 16 29 12 33c4-5 8-8 13-11-4 0-8 0-13 1Z"/>
+            <path d="M22 53c17 2 29 9 28 19-1 9-13 17-38 23 11-7 17-14 18-20 1-7-5-12-16-15 8 0 15 1 21 4-5-5-9-8-13-11Z"/>
+          </g>
+          <text x="86" y="77" fill="#421b29" font-family="Bodoni 72, Didot, 'Times New Roman', serif" font-size="77" font-weight="600" letter-spacing="-4">Semalìa</text>
+        </svg>
+      </a>
 
       <!-- Controlli Centrali: Settore + Ruolo -->
       <div class="flex flex-wrap items-center gap-2">
@@ -71,11 +116,8 @@
           <option value="tech">Tech &amp; Uffici</option>
         </select>
 
-        <div class="flex items-center bg-blue-50 p-1 rounded-xl border border-blue-200/80">
-          <button type="button" onclick="switchRole('hr')" id="role-hr" class="role-btn px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-700 text-white cursor-pointer">HR</button>
-          <button type="button" onclick="switchRole('medico')" id="role-medico" class="role-btn px-2.5 py-1 rounded-lg text-xs font-bold text-blue-800 hover:bg-blue-100 cursor-pointer">Medico</button>
-          <button type="button" onclick="switchRole('checkin')" id="role-checkin" class="role-btn px-2.5 py-1 rounded-lg text-xs font-bold text-blue-800 hover:bg-blue-100 cursor-pointer">Check-in</button>
-        </div>
+        <span id="account-label" class="text-xs font-bold text-slate-600"></span>
+        <button type="button" onclick="logout()" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50">Esci</button>
       </div>
     </div>
   </header>
@@ -136,7 +178,7 @@
         </div>
       </div>
 
-      <!-- CARICAMENTO MULTI-FILE + INVIO CONFERMATO -->
+      <!-- IMPORTAZIONE WORKBOOK AZIENDALE -->
       <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-col gap-3">
         <div id="multi-dropzone"
           onclick="document.getElementById('excel-input').click()"
@@ -144,28 +186,23 @@
           ondragleave="handleDropzoneLeave(event)"
           ondrop="handleDropzoneDrop(event)"
           class="w-full border-2 border-dashed border-slate-300 hover:border-blue-500 hover:bg-blue-50/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 cursor-pointer transition">
-          <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" multiple class="hidden" onchange="handleExcelUpload(event)" />
+          <input type="file" id="excel-input" accept=".xlsx,.xls" class="hidden" onchange="handleExcelUpload(event)" />
           <div class="flex items-center gap-3.5 min-w-0">
             <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <i data-lucide="files" class="w-6 h-6"></i>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-2">
-                <span class="text-sm font-extrabold text-slate-900">Carica file Excel / CSV</span>
+                <span class="text-sm font-extrabold text-slate-900">Carica workbook aziendale</span>
                 <span id="files-count-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700">0 file</span>
               </div>
-              <div id="file-status-label" class="text-xs text-slate-500 truncate mt-0.5">Seleziona o trascina Paghe, Assenze e Straordinari, poi clicca Invia Dati</div>
+              <div id="file-status-label" class="text-xs text-slate-500 truncate mt-0.5">Un file Excel con i fogli previsti, poi clicca Invia Dati</div>
             </div>
           </div>
 
           <div class="flex flex-wrap items-center gap-2 shrink-0" onclick="event.stopPropagation()">
-            <button type="button" onclick="downloadDemoBundle()" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold cursor-pointer transition">
-              <i data-lucide="download" class="w-3.5 h-3.5"></i>
-              <span>Scarica Demo (.zip)</span>
-            </button>
-            <button type="button" onclick="downloadAllTestZip()" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold cursor-pointer transition">
-              <i data-lucide="archive" class="w-3.5 h-3.5"></i>
-              <span>Tutti i File Test (.zip)</span>
+            <button type="button" onclick="loadDemoData()" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer transition">
+              <i data-lucide="database" class="w-3.5 h-3.5"></i><span>Carica dati demo nel mio spazio</span>
             </button>
             <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
               <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
@@ -206,6 +243,22 @@
       <!-- GRIGLIA REPARTI SOTTO STRESS -->
       <div id="departments-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
 
+      <div class="bg-white rounded-2xl border border-slate-200 p-5">
+        <h2 class="font-display font-extrabold text-base text-slate-900">Invita una persona aziendale</h2>
+        <p class="text-xs text-slate-500 mt-1 mb-4">L’indirizzo viene autorizzato dall’HR. La persona riceverà un codice monouso per impostare la propria password.</p>
+        <form id="invite-form" onsubmit="inviteAccount(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input id="invite-email" type="email" required placeholder="email@azienda.it" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <select id="invite-role" onchange="toggleInviteCode()" class="rounded-xl border border-slate-300 px-3 py-2 text-sm"><option value="lavoratore">Dipendente</option><option value="medico">Medico competente</option><option value="hr">HR</option></select>
+          <input id="invite-code" type="text" required placeholder="Matricola aziendale" class="rounded-xl border border-slate-300 px-3 py-2 text-sm">
+          <button type="submit" class="sm:col-span-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">Autorizza email e genera invito</button>
+        </form>
+        <div id="invite-result" class="hidden mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 break-all"></div>
+        <div class="mt-5 border-t border-slate-100 pt-4">
+          <h3 class="text-sm font-bold text-slate-800 mb-2">Account autorizzati</h3>
+          <div id="company-accounts" class="divide-y divide-slate-100"><p class="py-2 text-xs text-slate-500">Caricamento account…</p></div>
+        </div>
+      </div>
+
       <!-- GRAFICO ESSENZIALE -->
       <div class="bg-white rounded-2xl border border-slate-200 p-4">
         <div class="flex items-center justify-between mb-3">
@@ -241,7 +294,7 @@
           <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700">30 sec · 1–5</span>
         </div>
 
-        <select id="checkin-dept" class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"></select>
+        <p class="text-sm text-slate-600">Il tuo check-in è associato in modo riservato al tuo account. L’HR vede solo dati aggregati.</p>
 
         <div class="space-y-3">
           <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
@@ -329,9 +382,13 @@
           </div>
         </div>
 
-        <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-          <input type="checkbox" id="checkin-med" checked class="rounded text-blue-700" />
-          <span>Contatto solo Medico</span>
+        <label class="flex items-start gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+          <input type="checkbox" id="checkin-med" class="mt-0.5 rounded text-blue-700" />
+          <span>Acconsento alla condivisione del check-in con il medico competente. Il consenso è facoltativo e revocabile.</span>
+        </label>
+        <label class="flex items-start gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+          <input type="checkbox" id="checkin-contact" class="mt-0.5 rounded text-blue-700" />
+          <span>Desidero essere contattato dal medico competente.</span>
         </label>
 
         <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold cursor-pointer transition">
@@ -367,7 +424,12 @@
   </div>
 
   <script>
-    const API_BASE_URL = (window.STRESSA_API_URL || localStorage.getItem('stressa_api_url') || 'http://localhost:8000').replace(/\/+$/, '');
+    const isLocalFrontend = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      && ['3000', '5173', '5500', '8080'].includes(window.location.port);
+    const DEFAULT_API_ORIGIN = window.location.protocol === 'file:' || isLocalFrontend
+      ? 'http://127.0.0.1:8000'
+      : window.location.origin;
+    const API_BASE_URL = (window.SEMALIA_API_URL || DEFAULT_API_ORIGIN).replace(/\/+$/, '');
 
     const DATA = {
       operazioni: {
@@ -435,11 +497,7 @@
       }
     };
 
-    const MEDICO_CASES = [
-      { code: '#M-104', dept: 'Produzione & Operazioni', score: '4.2 / 5', status: 'Da contattare' },
-      { code: '#M-118', dept: 'Logistica & Magazzino', score: '3.9 / 5', status: 'Da contattare' },
-      { code: '#M-129', dept: 'Vendite & Commerciale', score: '3.7 / 5', status: 'In carico' }
-    ];
+    let MEDICO_CASES = [];
 
     let currentSector = 'all';
     let currentStatus = 'all';
@@ -447,19 +505,155 @@
     let chartObj = null;
     let apiOnline = false;
     let pendingFiles = [];
+    let currentAccount = JSON.parse(sessionStorage.getItem('semalia_account') || 'null');
+    let authMode = 'login';
+
+    function apiFetch(path, options = {}) {
+      const headers = new Headers(options.headers || {});
+      const token = currentAccount?.access_token;
+      if (token) headers.set('Authorization', `Bearer ${token}`);
+      return fetch(`${API_BASE_URL}${path}`, { ...options, headers }).then(response => {
+        if (response.status === 401 && currentAccount) logout();
+        return response;
+      });
+    }
+
+    async function readApiResponse(response) {
+      const raw = await response.text();
+      if (response.status === 405) {
+        return { detail: `HTTP 405 su ${response.url}: questa origine non sta raggiungendo l'API FastAPI. In locale il backend deve essere avviato su http://127.0.0.1:8000; in produzione frontend e API devono condividere il dominio.` };
+      }
+      if (!raw) return { detail: `Il server ha restituito una risposta vuota (HTTP ${response.status}).` };
+      try { return JSON.parse(raw); }
+      catch { return { detail: raw.trim() || `Risposta non valida (HTTP ${response.status}).` }; }
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
       renderAll();
-      checkApiHealth();
+      if (currentAccount?.access_token) enterWorkspace(currentAccount);
     });
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      const setup = mode === 'setup';
+      document.getElementById('setup-token-wrap').classList.toggle('hidden', !setup);
+      document.getElementById('auth-setup-token').required = setup;
+      document.getElementById('auth-password').autocomplete = setup ? 'new-password' : 'current-password';
+      document.getElementById('password-label').childNodes[0].textContent = setup ? 'Scegli una password (minimo 12 caratteri)' : 'Password';
+      document.getElementById('auth-submit').textContent = setup ? 'Attiva account e accedi' : 'Accedi';
+      document.getElementById('auth-tab-login').className = `rounded-xl px-3 py-2 text-sm font-bold ${setup ? 'bg-slate-100 text-slate-700' : 'bg-blue-700 text-white'}`;
+      document.getElementById('auth-tab-setup').className = `rounded-xl px-3 py-2 text-sm font-bold ${setup ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-700'}`;
+      document.getElementById('auth-error').classList.add('hidden');
+    }
+
+    function useDemoAccount(email, password) {
+      setAuthMode('login');
+      document.getElementById('auth-email').value = email;
+      document.getElementById('auth-password').value = password;
+      document.getElementById('auth-password').focus();
+    }
+
+    async function submitAuth(event) {
+      event.preventDefault();
+      const errorBox = document.getElementById('auth-error');
+      const body = { email: document.getElementById('auth-email').value.trim(), password: document.getElementById('auth-password').value };
+      const path = authMode === 'setup' ? '/api/v1/auth/set-password' : '/api/v1/auth/login';
+      if (authMode === 'setup') body.setup_token = document.getElementById('auth-setup-token').value.trim();
+      try {
+        const response = await fetch(`${API_BASE_URL}${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await readApiResponse(response);
+        if (!response.ok) throw new Error(data.detail || 'Accesso non riuscito.');
+        enterWorkspace(data);
+      } catch (error) {
+        errorBox.textContent = error.message || 'Backend non raggiungibile.';
+        errorBox.classList.remove('hidden');
+      }
+    }
+
+    function enterWorkspace(account) {
+      currentAccount = account;
+      sessionStorage.setItem('semalia_account', JSON.stringify(account));
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('account-label').textContent = `${account.company} · ${account.role}`;
+      const roleView = account.role === 'hr' ? 'hr' : account.role === 'medico' ? 'medico' : 'checkin';
+      document.getElementById('sector-select').classList.toggle('hidden', roleView !== 'hr');
+      document.getElementById('invite-form').closest('.bg-white').classList.toggle('hidden', roleView !== 'hr');
+      switchRole(roleView);
+      checkApiHealth();
+      if (roleView === 'medico') fetchDoctorCases();
+      if (roleView === 'hr') loadCompanyAccounts();
+    }
+
+    function logout() {
+      currentAccount = null;
+      sessionStorage.removeItem('semalia_account');
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('auth-form').reset();
+      setAuthMode('login');
+      document.getElementById('account-label').textContent = '';
+    }
+
+    function toggleInviteCode() {
+      const required = document.getElementById('invite-role').value === 'lavoratore';
+      document.getElementById('invite-code').required = required;
+      document.getElementById('invite-code').classList.toggle('hidden', !required);
+    }
+
+    async function inviteAccount(event) {
+      event.preventDefault();
+      const role = document.getElementById('invite-role').value;
+      const payload = { email: document.getElementById('invite-email').value.trim(), role };
+      if (role === 'lavoratore') payload.employee_identifier = document.getElementById('invite-code').value.trim();
+      const box = document.getElementById('invite-result');
+      try {
+        const response = await apiFetch('/api/v1/auth/invite', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const result = await readApiResponse(response);
+        if (!response.ok) throw new Error(result.detail || 'Invito non riuscito.');
+        box.textContent = `Invito creato per ${result.email}. Token monouso (validità 72 ore): ${result.setup_token}. Condividilo solo con il titolare tramite un canale verificato.`;
+        box.classList.remove('hidden');
+        document.getElementById('invite-form').reset();
+        toggleInviteCode();
+        loadCompanyAccounts();
+      } catch (error) {
+        box.textContent = error.message;
+        box.classList.remove('hidden');
+        box.classList.add('bg-red-50', 'text-red-800');
+      }
+    }
+
+    async function loadCompanyAccounts() {
+      const container = document.getElementById('company-accounts');
+      try {
+        const response = await apiFetch('/api/v1/auth/accounts');
+        const accounts = await readApiResponse(response);
+        if (!response.ok) throw new Error(accounts.detail || 'Impossibile leggere gli account.');
+        container.innerHTML = accounts.map(account => `
+          <div class="py-2 flex items-center justify-between gap-3">
+            <div class="min-w-0"><div class="truncate text-xs font-semibold text-slate-800">${escapeHtml(account.email)}</div><div class="text-[11px] text-slate-500">${escapeHtml(account.role)} · ${account.active ? 'attivo' : 'disattivato'}</div></div>
+            ${account.active && account.email !== currentAccount.email ? `<button type="button" onclick="revokeAccount(${Number(account.id)})" class="shrink-0 rounded-lg border border-red-200 px-2 py-1 text-[11px] font-bold text-red-700 hover:bg-red-50">Disattiva</button>` : ''}
+          </div>`).join('') || '<p class="py-2 text-xs text-slate-500">Nessun account aziendale.</p>';
+      } catch (error) {
+        container.textContent = error.message;
+      }
+    }
+
+    async function revokeAccount(id) {
+      if (!window.confirm('Disattivare questo account? Non potrà più accedere.')) return;
+      try {
+        const response = await apiFetch(`/api/v1/auth/accounts/${id}`, { method: 'DELETE' });
+        const result = await readApiResponse(response);
+        if (!response.ok) throw new Error(result.detail || 'Disattivazione non riuscita.');
+        loadCompanyAccounts();
+      } catch (error) { toast(error.message, 'warning'); }
+    }
 
     async function checkApiHealth() {
       try {
         const res = await fetch(`${API_BASE_URL}/api/v1/health`, { method: 'GET' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         apiOnline = true;
-        await fetchDepartmentsFromApi();
+        if (currentAccount?.role === 'hr') await fetchDepartmentsFromApi();
       } catch {
         apiOnline = false;
       }
@@ -483,12 +677,14 @@
       if (!apiOnline) return;
       try {
         const sectorQuery = currentSector === 'all' ? '' : `?sector=${encodeURIComponent(currentSector)}`;
-        const res = await fetch(`${API_BASE_URL}/api/v1/departments${sectorQuery}`);
+        const res = await apiFetch(`/api/v1/departments${sectorQuery}`);
         if (!res.ok) return;
-        const list = await res.json();
-        if (Array.isArray(list) && list.length) {
-          const targetSector = currentSector === 'all' ? 'operazioni' : currentSector;
-          DATA[targetSector].departments = list.map((d, idx) => ({
+        const list = await readApiResponse(res);
+        if (Array.isArray(list)) {
+          Object.values(DATA).forEach(section => { section.departments = []; });
+          list.forEach((d, idx) => {
+            const targetSector = DATA[d.sector] ? d.sector : 'operazioni';
+            DATA[targetSector].departments.push({
             id: d.id || `api-${idx}`,
             name: d.name,
             sector: d.sector || targetSector,
@@ -506,7 +702,8 @@
               delta: -Math.abs(Number(a.impact_points ?? a.delta ?? 8)),
               active: a.status === 'in_progress' || a.status === 'done'
             }))
-          }));
+            });
+          });
           renderAll();
         }
       } catch {
@@ -533,8 +730,10 @@
         b.classList.add('text-blue-800', 'hover:bg-blue-100');
       });
       const active = document.getElementById(`role-${role}`);
-      active.classList.remove('text-blue-800', 'hover:bg-blue-100');
-      active.classList.add('bg-blue-700', 'text-white');
+      if (active) {
+        active.classList.remove('text-blue-800', 'hover:bg-blue-100');
+        active.classList.add('bg-blue-700', 'text-white');
+      }
 
       if (role === 'hr') renderChart();
       lucide.createIcons();
@@ -600,8 +799,6 @@
       document.getElementById('kpi-crit-sub').textContent = `su ${depts.length} reparti`;
       document.getElementById('kpi-exit').textContent = exitRisk;
       document.getElementById('kpi-roi').textContent = `${roi}k €`;
-
-      document.getElementById('checkin-dept').innerHTML = depts.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
 
       renderGrid();
       renderMedico();
@@ -719,7 +916,7 @@
 
       if (apiOnline) {
         try {
-          await fetch(`${API_BASE_URL}/api/v1/departments/${encodeURIComponent(dept.id)}/actions`, {
+          await apiFetch(`/api/v1/departments/${encodeURIComponent(dept.id)}/actions`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -815,8 +1012,8 @@
       zip.file('03_demo_straordinari.xlsx', rowsToXlsxArrayBuffer(strRows, 'Straordinari'));
 
       const blob = await zip.generateAsync({ type: 'blob' });
-      triggerZipDownload(blob, 'stressa_demo_3_file.zip');
-      toast('Archivio stressa_demo_3_file.zip scaricato', 'success');
+      triggerZipDownload(blob, 'semalia_demo_3_file.zip');
+      toast('Archivio semalia_demo_3_file.zip scaricato', 'success');
     }
 
     async function downloadAllTestZip() {
@@ -865,8 +1062,8 @@
       zip.file('test_assenze_straordinari.xlsx', rowsToXlsxArrayBuffer(strRows, 'Turni_Straordinari'));
 
       const blob = await zip.generateAsync({ type: 'blob' });
-      triggerZipDownload(blob, 'stressa_tutti_file_test.zip');
-      toast('Archivio stressa_tutti_file_test.zip scaricato', 'success');
+      triggerZipDownload(blob, 'semalia_tutti_file_test.zip');
+      toast('Archivio semalia_tutti_file_test.zip scaricato', 'success');
     }
 
     function handleDropzoneOver(e) {
@@ -925,6 +1122,7 @@
     }
 
     function stageSelectedFiles(files) {
+      if (files.length > 1) { toast('Seleziona un solo workbook Excel completo.', 'warning'); return; }
       const existingNames = new Set(pendingFiles.map(f => f.name));
       files.forEach(f => {
         if (!existingNames.has(f.name)) {
@@ -951,6 +1149,7 @@
     function handleExcelUpload(e) {
       const files = Array.from(e.target.files || []);
       if (!files.length) return;
+      if (files.length > 1) { toast('Carica un solo workbook Excel completo.', 'warning'); e.target.value = ''; return; }
       stageSelectedFiles(files);
       e.target.value = '';
     }
@@ -1000,33 +1199,25 @@
     }
 
     async function processMultipleFiles(files) {
+      if (!apiOnline) { toast('Backend non raggiungibile. Riprova quando il servizio è online.', 'warning'); return; }
+      if (files.length !== 1) { toast('Carica un solo workbook Excel completo.', 'warning'); return; }
       const targetSector = currentSector === 'all' ? 'operazioni' : currentSector;
       const fileNames = files.map(f => f.name);
 
-      if (apiOnline) {
-        try {
-          const formData = new FormData();
-          files.forEach(f => formData.append('files', f));
-          formData.append('file', files[0]);
-          formData.append('sector', targetSector);
-          formData.append('connector', 'multi_excel_csv');
-
-          const res = await fetch(`${API_BASE_URL}/api/v1/ingest/upload`, {
-            method: 'POST',
-            body: formData
-          });
-
-          if (res.ok) {
-            const payload = await res.json();
-            await fetchDepartmentsFromApi();
-            const count = payload.departments_updated ?? getAllDepartments().length;
-            showUploadSuccessFeedback(fileNames, count);
-            toast('File caricato! Report aggiornato', 'success');
-            return;
-          }
-        } catch {
-          apiOnline = false;
-        }
+      try {
+        const formData = new FormData();
+        formData.append('file', files[0]);
+        const res = await apiFetch('/api/v1/ingest/upload-excel', { method: 'POST', body: formData });
+        const payload = await readApiResponse(res);
+        if (!res.ok) throw new Error(payload.detail || 'Importazione non riuscita.');
+        await fetchDepartmentsFromApi();
+        const count = getAllDepartments().length;
+        showUploadSuccessFeedback(fileNames, count);
+        toast(payload.messaggio || 'File caricato! Report aggiornato.', 'success');
+        return;
+      } catch (error) {
+        toast(error.message || 'Errore durante l’importazione del workbook.', 'warning');
+        return;
       }
 
       try {
@@ -1135,32 +1326,70 @@
       }
     }
 
+    async function loadDemoData() {
+      try {
+        const response = await apiFetch('/api/v1/ingest/load-demo', { method: 'POST' });
+        const result = await readApiResponse(response);
+        if (!response.ok) throw new Error(result.detail || 'Caricamento demo non riuscito.');
+        await fetchDepartmentsFromApi();
+        toast(result.messaggio || 'Dataset demo caricato nel database della tua azienda.', 'success');
+      } catch (error) { toast(error.message, 'warning'); }
+    }
+
     function renderMedico() {
       const el = document.getElementById('medico-list');
+      if (!MEDICO_CASES.length) {
+        el.innerHTML = '<p class="py-6 text-sm text-slate-500">Nessun caso con consenso attivo da mostrare.</p>';
+        return;
+      }
       el.innerHTML = MEDICO_CASES.map((c, i) => `
         <div class="py-3 flex items-center justify-between gap-3">
           <div class="flex items-center gap-3">
-            <span class="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800">${c.code}</span>
+            <span class="font-mono text-xs font-extrabold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800">${escapeHtml(c.code)}</span>
             <div>
-              <div class="text-xs font-bold text-slate-900">${c.dept}</div>
-              <div class="text-[11px] font-semibold text-slate-500">Indice: ${c.score}</div>
+              <div class="text-xs font-bold text-slate-900">${escapeHtml(c.dept)}</div>
+              <div class="text-[11px] font-semibold text-slate-500">Indice: ${escapeHtml(c.score)}</div>
             </div>
           </div>
           <button type="button" onclick="toggleMedicoStatus(${i})" class="px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${c.status === 'In carico' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
-            ${c.status}
+            ${escapeHtml(c.status)}
           </button>
         </div>
       `).join('');
     }
 
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function fetchDoctorCases() {
+      try {
+        const response = await apiFetch('/api/v1/medico/operatori');
+        const data = await readApiResponse(response);
+        if (!response.ok) throw new Error(data.detail || 'Impossibile caricare i casi.');
+        MEDICO_CASES = data.filter(c => c.da_contattare || ['contattato', 'in_valutazione'].includes(c.stato_presa_in_carico)).map(c => ({
+          code: c.codice, dept: c.reparto, score: `${Number(c.punteggio).toFixed(1)} / 100`,
+          status: c.stato_presa_in_carico === 'contattato' || c.stato_presa_in_carico === 'in_valutazione' ? 'In carico' : 'Da contattare'
+        }));
+        renderMedico();
+      } catch (error) {
+        document.getElementById('medico-list').innerHTML = `<p class="py-6 text-sm text-red-700">${escapeHtml(error.message)}</p>`;
+      }
+    }
+
     function toggleMedicoStatus(i) {
-      MEDICO_CASES[i].status = MEDICO_CASES[i].status === 'In carico' ? 'Da contattare' : 'In carico';
-      renderMedico();
+      const nextStatus = MEDICO_CASES[i].status === 'In carico' ? 'concluso' : 'in_valutazione';
+      apiFetch(`/api/v1/medico/presa-in-carico/${encodeURIComponent(MEDICO_CASES[i].code)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ stato: nextStatus })
+      }).then(response => {
+        if (!response.ok) throw new Error('Aggiornamento non riuscito');
+        return fetchDoctorCases();
+      }).catch(error => toast(error.message, 'warning'));
     }
 
     async function submitCheckin(e) {
       e.preventDefault();
-      const dept = document.getElementById('checkin-dept').value;
       const v1 = Number(document.querySelector('input[name="c1"]:checked')?.value || 3);
       const v2 = Number(document.querySelector('input[name="c2"]:checked')?.value || 4);
       const v3 = Number(document.querySelector('input[name="c3"]:checked')?.value || 2);
@@ -1168,39 +1397,26 @@
       const v5 = Number(document.querySelector('input[name="c5"]:checked')?.value || 4);
       const v6 = Number(document.querySelector('input[name="c6"]:checked')?.value || 3);
       const consent = document.getElementById('checkin-med').checked;
+      const contactRequest = document.getElementById('checkin-contact').checked;
 
       const stressScores = [v1, 6 - v2, v3, 6 - v4, 6 - v5, 6 - v6];
       const avg = (stressScores.reduce((sum, val) => sum + val, 0) / stressScores.length).toFixed(1);
 
-      if (apiOnline) {
-        try {
-          await fetch(`${API_BASE_URL}/api/v1/checkin`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              department_id: dept,
-              stress_level: Math.min(5, Math.max(1, Math.round(Number(avg)))),
-              workload_level: v3,
-              recovery_ok: v2 >= 3,
-              sleep_quality: v4,
-              colleagues_relation: v5,
-              manager_relation: v6,
-              consent_medical_contact: consent
-            })
-          });
-        } catch {}
-      }
-
-      if (Number(avg) >= 3.0) {
-        MEDICO_CASES.unshift({
-          code: `#M-${Math.floor(200 + Math.random() * 700)}`,
-          dept,
-          score: `${avg} / 5`,
-          status: 'Da contattare'
+      if (!currentAccount?.employee_code) return toast('Account non associato a un codice dipendente. Contatta HR.', 'warning');
+      try {
+        const response = await apiFetch('/api/v1/lavoratore/checkin', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ codice: currentAccount.employee_code,
+            domanda_singola: Math.min(5, Math.max(1, Math.round(Number(avg)))),
+            consenso_medico: consent, richiesta_colloquio: contactRequest })
         });
-        renderMedico();
+        const result = await readApiResponse(response);
+        if (!response.ok) throw new Error(result.detail || 'Check-in non inviato.');
+        toast('Check-in inviato. Grazie per aver condiviso come stai.', 'success');
+        e.target.reset();
+      } catch (error) {
+        toast(error.message || 'Backend non raggiungibile.', 'warning');
       }
-      toast(`Inviato (${avg}/5)`, 'success');
     }
 
     function renderChart() {

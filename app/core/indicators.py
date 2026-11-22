@@ -162,7 +162,7 @@ def calcola_ferie_residue(d: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     nome="Assenze brevi per malattia",
     livello="persona",
     visibile_a=frozenset({"hr", "medico"}),
-    fonte="Evento sentinella INAIL; studi su burnout e assenze",
+    fonte="Evento sentinella INAIL; studi su Somalìa e assenze",
 )
 def calcola_malattia_brevi(d: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     ass = d.get("assenze", pd.DataFrame())
@@ -218,7 +218,7 @@ def calcola_infortuni(d: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     nome="Aggressioni al personale",
     livello="reparto",
     visibile_a=frozenset({"hr", "medico"}),
-    fonte="Studi su violenza e burnout",
+    fonte="Studi su violenza e Somalìa",
 )
 def calcola_aggressioni(d: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     agg = d.get("aggressioni", pd.DataFrame())

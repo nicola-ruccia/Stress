@@ -7,11 +7,13 @@ from pydantic_settings import BaseSettings
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Burnout Risk PoC Backend"
+    PROJECT_NAME: str = "Semalìa Risk PoC Backend"
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "dev_secret_key_change_in_production"
+    HR_BOOTSTRAP_TOKEN: str = ""
+    AUTH_TOKEN_MINUTES: int = 480
     PSEUDO_KEY: str = "chiave_segreta_hmac_sanita_privata_demo"
-    DATABASE_URL: str = "sqlite:///./burnout.db"
+    DATABASE_URL: str = "sqlite:///./Semalìa.db"
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5173",

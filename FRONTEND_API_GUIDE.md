@@ -1,4 +1,4 @@
-# Guida di Integrazione Frontend - Backend API Rischio Burnout
+# Guida di Integrazione Frontend - Backend API Rischio Somalìa
 
 Questa guida è destinata allo sviluppatore frontend per facilitare l'integrazione con il backend FastAPI.
 
@@ -20,7 +20,34 @@ Il backend accetta chiamate dalle porte frontend standard:
 
 ---
 
-## 2. Le 4 Viste del Software e Flussi Utente
+## 2. Accesso e le tre viste per ruolo
+
+Il prodotto espone tre viste operative: **HR**, **medico competente** e **lavoratore**. Ogni account è associato a un'azienda e a un solo ruolo; il frontend deve usare il ruolo restituito dal login per mostrare la vista corretta. Le API `/hr`, `/medico` e `/lavoratore` richiedono `Authorization: Bearer <access_token>`.
+
+### Attivazione iniziale
+
+1. Il gestore della piattaforma configura `HR_BOOTSTRAP_TOKEN`, `SECRET_KEY` e `PSEUDO_KEY` come valori casuali distinti nell'ambiente.
+2. Per ogni nuova azienda, il gestore crea l'account HR iniziale con `POST /api/v1/auth/bootstrap-hr` (`email`, `company`, `password`, `bootstrap_token`). Il token di bootstrap è una credenziale amministrativa: limitarne l'accesso e ruotarlo dopo l'onboarding.
+3. L'HR carica prima i dati pseudonimizzati dei dipendenti. Per autorizzare una persona usa `POST /api/v1/auth/invite` con `email`, `role` e, per `lavoratore`, `employee_identifier` (matricola). Il backend la pseudonimizza in memoria e non la salva; l'account conserva solo il codice pseudonimo.
+4. Il backend restituisce un token di attivazione monouso, valido 72 ore. HR lo consegna al dipendente tramite canale aziendale verificato. Il dipendente imposta la propria password con `POST /api/v1/auth/set-password` (`email`, `setup_token`, `password`). Non è richiesta una password provvisoria.
+5. Dagli accessi successivi si usa `POST /api/v1/auth/login` con email e password. Inviare il token restituito nelle chiamate alle viste protette.
+6. L'HR consulta gli account con `GET /api/v1/auth/accounts` e può disattivarli con `DELETE /api/v1/auth/accounts/{account_id}`.
+
+L'invito prova che l'indirizzo è stato inserito dall'HR, ma la verifica effettiva dell'indirizzo dipende dalla consegna del token al titolare tramite email aziendale verificata. Il backend PoC non invia email: il token va trasmesso dal canale aziendale scelto dall'organizzazione.
+
+In locale i dati operativi di ogni azienda sono archiviati in un database SQLite separato. Su Vercel `DATABASE_URL` deve puntare a PostgreSQL persistente: account e credenziali restano nello schema centrale, mentre i dati operativi sono isolati in uno schema PostgreSQL per azienda. Il mapping matricola/codice viene cifrato e salvato nel database dell'azienda, quindi sopravvive alle esecuzioni serverless.
+
+### Pubblicazione su Vercel
+
+Il progetto deploya frontend e API sulla stessa origine tramite `app/main.py`; non impostare un URL API separato. Collega un database PostgreSQL persistente (ad esempio Neon dal Marketplace Vercel) e imposta nelle Environment Variables del progetto `DATABASE_URL` (stringa pooled con SSL), `SECRET_KEY`, `PSEUDO_KEY` e `HR_BOOTSTRAP_TOKEN` con valori casuali distinti. Mantieni `PSEUDO_KEY` stabile: cambiarla rende non decifrabile il mapping cifrato già archiviato. Dopo aver salvato le variabili, fai un nuovo deploy. Il primo account HR si crea con `POST /api/v1/auth/bootstrap-hr`; poi HR invita dipendenti e medico dalla vista aziendale. Vercel non conserva i file scritti nel filesystem della Function, perciò i dati e i mapping non devono essere salvati su file locale.
+
+### Le tre viste
+
+- **HR**: indicatori aggregati e inviti account, senza nomi o dati individuali di salute.
+- **Medico competente**: dati individuali pseudonimizzati per la presa in carico secondo il consenso previsto.
+- **Lavoratore**: check-in e consultazione dei propri dati.
+
+## 3. Vista Amministratore / Ingestione Dati
 
 ### A. Vista Amministratore / Ingestione Dati
 Permette di caricare i dati della clinica e visualizzare il report di validazione:
@@ -56,7 +83,7 @@ Permette di caricare i dati della clinica e visualizzare il report di validazion
 2. **Dettaglio Singolo Reparto**: `GET /api/v1/hr/reparto/{reparto_nome}?mese=YYYY-MM`
 3. **Avvisi sull'Orario**: `GET /api/v1/hr/avvisi-orario?mese=YYYY-MM`
    - Codici anonimi con riposo sotto le 11 ore o turni di 12 ore o più.
-   - **Nota legale**: questi avvisi non contengono MAI l'etichetta "burnout" o riferimenti alla salute.
+   - **Nota legale**: questi avvisi non contengono MAI l'etichetta "Somalìa" o riferimenti alla salute.
 
 ---
 
@@ -84,15 +111,15 @@ Accesso clinico-organizzativo per la prevenzione e presa in carico individuale.
 ### D. Vista Lavoratore (Dipendente)
 Spazio personale, protetto e anonimo per il singolo operatore.
 
-1. **Accesso con Codice**: `POST /api/v1/lavoratore/accesso?codice=abc1234567`
-2. **Visualizzazione del Proprio Stato**: `GET /api/v1/lavoratore/mio-stato/{codice}`
+1. Il dipendente accede con email aziendale e password; il token restituito è associato al codice pseudonimo assegnato all'account dall'HR.
+2. **Visualizzazione del Proprio Stato**: `GET /api/v1/lavoratore/mio-stato/{codice}` (Bearer token obbligatorio; il codice deve corrispondere all'account)
    - Restituisce `punteggio_indicativo`, `fascia` ("basso", "medio", "alto") e `spiegazione` in linguaggio naturale chiaro e non clinico.
    - Storico dei propri check-in compilati e stato del consenso.
 3. **Invio Check-in Mensile**: `POST /api/v1/lavoratore/checkin`
    - **Step 1**: Domanda singola da 1 a 5 (*"Quanto ti senti sopraffatto o svuotato dal lavoro?"*).
    - **Step 2**: Se il lavoratore risponde 3, 4 o 5, l'interfaccia sblocca e mostra le 12 domande facoltative del **BAT-12** (Burnout Assessment Tool, scala 1-5).
-   - **Step 3**: Toggle *"Condividi questo risultato con il medico competente"* (`consenso_medico: true/false`).
-   - **Step 4**: Pulsante *"Richiedi colloquio riservato con il medico"* (`richiesta_colloquio: true/false`).
+   - **Step 3**: Consenso facoltativo e revocabile alla condivisione (`consenso_medico: true/false`).
+   - **Step 4**: Richiesta di colloquio separata; per richiederlo deve essere attivo il consenso al medico.
 4. **Modifica Consenso**: `PUT /api/v1/lavoratore/consenso/{codice}`
    - Payload: `{ "consenso_medico": false }`
    - La revoca del consenso ha effetto immediato sulla vista del medico.
@@ -106,7 +133,7 @@ Puoi copiare direttamente queste definizioni nel file `types.ts` del tuo progett
 
 ```typescript
 // Ruoli utente
-export type UserRole = 'hr' | 'medico' | 'lavoratore' | 'admin';
+export type UserRole = 'hr' | 'medico' | 'lavoratore';
 export type FasciaRischio = 'basso' | 'medio' | 'alto' | 'insufficiente';
 export type ColoreSemaforo = 'verde' | 'giallo' | 'rosso';
 
